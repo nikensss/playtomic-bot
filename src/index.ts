@@ -1,3 +1,4 @@
+import jwt from 'jsonwebtoken';
 import { request } from 'undici';
 import { promises as fs } from 'fs';
 import { Availability, Tenant } from './types';
@@ -8,8 +9,16 @@ const RELEVANT_TENANTS = {
   PLAZA_PADEL: '0bd51db2-7d73-4748-952e-2b628e4e7679'
 };
 
-const main = async (): Promise<void> => {
-  await fs.mkdir('./data', { recursive: true });
+const isTokenExpired = (token: string): boolean => {
+  const {
+    payload: { exp }
+  } = jwt.decode(token, { json: true }) || { payload: { exp: 0 } };
+
+  return new Date(exp * 1000).getTime() <= Date.now();
+};
+
+const getAccessToken = async (): Promise<string> => {
+  if (process.env.ACCESS_TOKEN && !isTokenExpired(process.env.ACCESS_TOKEN)) return process.env.ACCESS_TOKEN;
 
   const login = await request('https://playtomic.io/api/v3/auth/login', {
     method: 'POST',
@@ -21,6 +30,23 @@ const main = async (): Promise<void> => {
   });
 
   const { access_token } = await login.body.json();
+
+  const env = await fs.readFile('.env', 'utf8');
+
+  // check if .env has `ACCESS_TOKEN` line
+  if (/ACCESS_TOKEN=/.test(env)) {
+    // in such a case, replace that part
+    await fs.writeFile('.env', env.replace(/ACCESS_TOKEN=.*\n/, `ACCESS_TOKEN=${access_token}\n`));
+  } else {
+    // else, add it
+    await fs.writeFile('.env', `${env}\nACCESS_TOKEN=${access_token}\n`);
+  }
+
+  return access_token;
+};
+
+const main = async (): Promise<void> => {
+  const access_token = await getAccessToken();
 
   const tenants: Tenant[] = await (
     await request('https://playtomic.io/api/v1/tenants', {
