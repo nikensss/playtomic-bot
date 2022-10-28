@@ -1,7 +1,11 @@
 import jwt from 'jsonwebtoken';
+import { promisify } from 'util';
+import child_process from 'child_process';
 import { request } from 'undici';
 import { promises as fs } from 'fs';
 import { Availability, Tenant } from './types';
+
+const exec = promisify(child_process.exec);
 
 const RELEVANT_TENANTS = {
   PADEL_CITY: '19dd692d-32d8-4e22-8a25-989a00b2695f',
@@ -9,12 +13,10 @@ const RELEVANT_TENANTS = {
   PLAZA_PADEL: '0bd51db2-7d73-4748-952e-2b628e4e7679'
 };
 
-const isTokenExpired = (token: string): boolean => {
-  const {
-    payload: { exp }
-  } = jwt.decode(token, { json: true }) || { payload: { exp: 0 } };
+export const isTokenExpired = (token: string): boolean => {
+  const { payload } = jwt.decode(token, { json: true }) || { payload: { exp: 0 } };
 
-  return new Date(exp * 1000).getTime() <= Date.now();
+  return new Date((payload?.exp || 0) * 1000).getTime() <= Date.now();
 };
 
 const getAccessToken = async (): Promise<string> => {
@@ -31,16 +33,8 @@ const getAccessToken = async (): Promise<string> => {
 
   const { access_token } = await login.body.json();
 
-  const env = await fs.readFile('.env', 'utf8');
-
-  // check if .env has `ACCESS_TOKEN` line
-  if (/ACCESS_TOKEN=/.test(env)) {
-    // in such a case, replace that part
-    await fs.writeFile('.env', env.replace(/ACCESS_TOKEN=.*\n/, `ACCESS_TOKEN=${access_token}\n`));
-  } else {
-    // else, add it
-    await fs.writeFile('.env', `${env}\nACCESS_TOKEN=${access_token}\n`);
-  }
+  // replace the token or add it if it's not present in the .env file
+  await exec(`cat .env | gsed -i -n -e '/^ACCESS_TOKEN=.*$/!p' -e '$aACCESS_TOKEN=${access_token}' .env`);
 
   return access_token;
 };
