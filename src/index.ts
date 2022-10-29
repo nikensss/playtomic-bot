@@ -1,87 +1,14 @@
-import jwt from 'jsonwebtoken';
-import { promisify } from 'util';
-import child_process from 'child_process';
-import { request } from 'undici';
 import { promises as fs } from 'fs';
-import { Availability, Tenant } from './types';
-
-const exec = promisify(child_process.exec);
-
-const RELEVANT_TENANTS = {
-  PADEL_CITY: '19dd692d-32d8-4e22-8a25-989a00b2695f',
-  ALLROUND_PADEL: 'cc65e668-bba9-42f6-8629-31c607c1b899',
-  PLAZA_PADEL: '0bd51db2-7d73-4748-952e-2b628e4e7679'
-};
-
-export const isTokenExpired = (token: string): boolean => {
-  const { payload } = jwt.decode(token, { json: true }) || { payload: { exp: 0 } };
-
-  return new Date((payload?.exp || 0) * 1000).getTime() <= Date.now();
-};
-
-const getAccessToken = async (): Promise<string> => {
-  if (process.env.ACCESS_TOKEN && !isTokenExpired(process.env.ACCESS_TOKEN)) return process.env.ACCESS_TOKEN;
-
-  const login = await request('https://playtomic.io/api/v3/auth/login', {
-    method: 'POST',
-    body: JSON.stringify({
-      email: process.env.EMAIL,
-      password: process.env.PASSWORD
-    }),
-    headers: { 'content-type': 'application/json' }
-  });
-
-  const { access_token } = await login.body.json();
-
-  // replace the token or add it if it's not present in the .env file
-  await exec(`cat .env | gsed -i -n -e '/^ACCESS_TOKEN=.*$/!p' -e '$aACCESS_TOKEN=${access_token}' .env`);
-
-  return access_token;
-};
+import { Playtomic } from './Playtomic';
+import { Availability } from './types';
 
 const main = async (): Promise<void> => {
-  const access_token = await getAccessToken();
+  const playtomic = new Playtomic(process.env.EMAIL, process.env.PASSWORD);
 
-  const tenants: Tenant[] = await (
-    await request('https://playtomic.io/api/v1/tenants', {
-      method: 'GET',
-      headers: {
-        'content-type': 'application/json',
-        authorization: `Bearer ${access_token}`
-      },
-      query: {
-        user_id: 'me',
-        playtomic_status: 'active',
-        with_properties: 'ALLOWS_CASH_PAYMENT',
-        coordinate: '51.99556897,4.36451191,Delft',
-        sport_id: 'PADEL',
-        radiu: 50000,
-        size: 40
-      }
-    })
-  ).body.json();
+  const relevant_tenants = await playtomic.getRelevantTenants();
+  await fs.writeFile('data/relevant_tenants.json', JSON.stringify(relevant_tenants, null, 2));
 
-  const relevantTenants = tenants.filter(t => Object.values(RELEVANT_TENANTS).includes(t.tenant_id));
-
-  await fs.writeFile('data/tenants.json', JSON.stringify(tenants, null, 2));
-  await fs.writeFile('data/relevant_tenants.json', JSON.stringify(relevantTenants, null, 2));
-
-  const availability: Availability[] = await (
-    await request('https://playtomic.io/api/v1/availability', {
-      method: 'GET',
-      headers: {
-        'content-type': 'application/json',
-        authorization: `Bearer ${access_token}`
-      },
-      query: {
-        user_id: 'me',
-        local_start_min: '2022-10-31T00:00:00',
-        local_start_max: '2022-10-31T23:59:59',
-        sport_id: 'PADEL',
-        tenant_id: Object.values(RELEVANT_TENANTS).join(',')
-      }
-    })
-  ).body.json();
+  const availability: Availability[] = await playtomic.getAvailability();
 
   await fs.writeFile('data/availability.json', JSON.stringify(availability, null, 2));
 };
