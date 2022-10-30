@@ -15,14 +15,14 @@ const getTwoWeeksOfDates = (): Date[] => {
 const main = async (): Promise<void> => {
   const playtomic = new Playtomic(process.env.EMAIL, process.env.PASSWORD);
 
-  const relevant_tenants: Tenant[] = await playtomic.getRelevantTenants();
+  const relevantTenants: Tenant[] = await playtomic.getRelevantTenants();
 
-  for (const tenant of relevant_tenants) {
+  for (const tenant of relevantTenants) {
     tenant.setAvailability(await playtomic.getAvailability(tenant, getTwoWeeksOfDates()));
   }
 
   const desiredSlots: SlotRaw['start_time'][] = ['17:00:00', '17:30:00'];
-  const summary = relevant_tenants.reduce((t, c) => {
+  const summary = relevantTenants.reduce((t, c) => {
     const summary = c.summariseAvailableCourtsWithSlotsAt(...desiredSlots);
 
     return `${t}\n${summary}`;

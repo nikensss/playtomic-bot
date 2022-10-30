@@ -161,29 +161,29 @@ export class Tenant {
     PLAZA_PADEL: '0bd51db2-7d73-4748-952e-2b628e4e7679'
   } as const;
 
-  private tenant_raw: TenantRaw;
+  private tenantRaw: TenantRaw;
   private courts: Court[] = [];
 
-  constructor(tenant_raw: TenantRaw) {
-    this.tenant_raw = clone(tenant_raw);
-    this.courts = this.tenant_raw.resources.map(r => new Court(r));
+  constructor(tenantRaw: TenantRaw) {
+    this.tenantRaw = clone(tenantRaw);
+    this.courts = this.tenantRaw.resources.map(r => new Court(r));
   }
 
   get id(): TenantRaw['tenant_id'] {
-    return this.tenant_raw.tenant_id;
+    return this.tenantRaw.tenant_id;
   }
 
   get name(): TenantRaw['tenant_name'] {
-    return this.tenant_raw.tenant_name;
+    return this.tenantRaw.tenant_name;
   }
 
   isRelevant(): boolean {
     const relevant_tenant_ids: string[] = Object.values(Tenant.RELEVANT_TENANTS);
-    return relevant_tenant_ids.includes(this.tenant_raw.tenant_id);
+    return relevant_tenant_ids.includes(this.tenantRaw.tenant_id);
   }
 
   get raw(): TenantRaw {
-    return clone(this.tenant_raw);
+    return clone(this.tenantRaw);
   }
 
   setAvailability(availability: Availability[]): void {

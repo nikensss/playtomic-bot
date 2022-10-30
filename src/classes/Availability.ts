@@ -8,20 +8,20 @@ export interface AvailabilityRaw {
 }
 
 export class Availability {
-  private availability_raw: AvailabilityRaw;
+  private availabilityRaw: AvailabilityRaw;
   private slots: Slot[];
 
-  constructor(availability_raw: AvailabilityRaw) {
-    this.availability_raw = clone(availability_raw);
-    this.slots = this.availability_raw.slots.map(slow_raw => new Slot(slow_raw));
+  constructor(availabilityRaw: AvailabilityRaw) {
+    this.availabilityRaw = clone(availabilityRaw);
+    this.slots = this.availabilityRaw.slots.map(slotRaw => new Slot(slotRaw));
   }
 
   get id(): AvailabilityRaw['resource_id'] {
-    return this.availability_raw.resource_id;
+    return this.availabilityRaw.resource_id;
   }
 
   get start_date(): AvailabilityRaw['start_date'] {
-    return this.availability_raw.start_date;
+    return this.availabilityRaw.start_date;
   }
 
   isAvailableAt(...times: SlotRaw['start_time'][]): boolean {
@@ -45,6 +45,6 @@ export class Availability {
   }
 
   get raw(): AvailabilityRaw {
-    return clone(this.availability_raw);
+    return clone(this.availabilityRaw);
   }
 }
