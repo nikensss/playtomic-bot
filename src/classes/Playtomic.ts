@@ -1,29 +1,19 @@
-import jwt from 'jsonwebtoken';
-import dayjs from 'dayjs';
-import { promisify } from 'util';
 import child_process from 'child_process';
+import dayjs from 'dayjs';
+import jwt from 'jsonwebtoken';
 import { request } from 'undici';
-import { Availability, Tenant } from './types';
+import { promisify } from 'util';
+import { Availability, AvailabilityRaw } from './Availability';
+import { Tenant, TenantRaw } from './Tenant';
 
 const exec = promisify(child_process.exec);
 
 export class Playtomic {
-  private static RELEVANT_TENANTS = {
-    PADEL_CITY: '19dd692d-32d8-4e22-8a25-989a00b2695f',
-    ALLROUND_PADEL: 'cc65e668-bba9-42f6-8629-31c607c1b899',
-    PLAZA_PADEL: '0bd51db2-7d73-4748-952e-2b628e4e7679'
-  } as const;
-
   private access_token: string | undefined;
 
   constructor(private email?: string, private password?: string) {
     if (!email) throw new Error('Missing email for login');
     if (!password) throw new Error('Missing password for login');
-  }
-
-  private isRelevantTenant(tenant_id: string): boolean {
-    const relevant_tenant_ids = Object.values(Playtomic.RELEVANT_TENANTS) as string[];
-    return relevant_tenant_ids.includes(tenant_id);
   }
 
   private isAccessTokenExpired(): boolean {
@@ -61,7 +51,8 @@ export class Playtomic {
   }
 
   async getTenants(): Promise<Tenant[]> {
-    const tenants: Tenant[] = await (
+    console.log('getting tenants...');
+    const tenants: TenantRaw[] = await (
       await request('https://playtomic.io/api/v1/tenants', {
         method: 'GET',
         headers: {
@@ -80,29 +71,38 @@ export class Playtomic {
       })
     ).body.json();
 
-    return tenants;
+    console.log('got tenants!');
+
+    return tenants.map(t => new Tenant(t));
   }
 
   async getRelevantTenants(): Promise<Tenant[]> {
-    return (await this.getTenants()).filter(t => this.isRelevantTenant(t.tenant_id));
+    return (await this.getTenants()).filter(t => t.isRelevant());
   }
 
-  async getAvailability(d = new Date()): Promise<Availability[]> {
-    const availabilityResponse = await request('https://playtomic.io/api/v1/availability', {
-      method: 'GET',
-      headers: {
-        'content-type': 'application/json',
-        authorization: `Bearer ${await this.getAccessToken()}`
-      },
-      query: {
-        user_id: 'me',
-        sport_id: 'PADEL',
-        tenant_id: Object.values(Playtomic.RELEVANT_TENANTS).join(','),
-        local_start_min: dayjs(d).startOf('day').format('YYYY-MM-DDTHH:mm:ss'),
-        local_start_max: dayjs(d).endOf('day').format('YYYY-MM-DDTHH:mm:ss')
-      }
-    });
+  async getAvailability(tenant: Tenant, dates: Date[]): Promise<Availability[]> {
+    const availabilities: Availability[] = [];
+    for (const date of dates) {
+      console.log(`getting ${tenant.name} availability for ${date}...`);
+      const availabilityResponse = await request('https://playtomic.io/api/v1/availability', {
+        method: 'GET',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${await this.getAccessToken()}`
+        },
+        query: {
+          user_id: 'me',
+          sport_id: 'PADEL',
+          tenant_id: tenant.id,
+          local_start_min: dayjs(date).startOf('day').format('YYYY-MM-DDTHH:mm:ss'),
+          local_start_max: dayjs(date).endOf('day').format('YYYY-MM-DDTHH:mm:ss')
+        }
+      });
 
-    return await availabilityResponse.body.json();
+      const _availabilities = (await availabilityResponse.body.json()).map((e: AvailabilityRaw) => new Availability(e));
+      availabilities.push(..._availabilities);
+    }
+
+    return availabilities;
   }
 }

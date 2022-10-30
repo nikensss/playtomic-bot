@@ -1,4 +1,9 @@
-export interface Tenant {
+import clone from 'clone';
+import { Availability } from './Availability';
+import { Court, Resource } from './Court';
+import { SlotRaw } from './Slot';
+
+export interface TenantRaw {
   default_currency: DefaultCurrency;
   tenant_id: string;
   tenant_uid: string;
@@ -138,54 +143,6 @@ export interface TentantsResponseProperties {
   [key: string]: unknown;
 }
 
-export interface Resource {
-  resource_id: string;
-  name: string;
-  description: string;
-  sport_id: SportID;
-  reservation_priority: number;
-  is_active: boolean;
-  merchant_resource_id: null | string;
-  properties: ResourceProperties;
-  booking_settings: ResourceBookingSettings | null;
-}
-
-export interface ResourceBookingSettings {
-  start_time_policy: StartTimePolicy;
-  allowed_duration_increments: number[];
-  is_bookable_online: boolean;
-  allows_onsite_payment: boolean;
-  shared_resources: unknown[];
-}
-
-export enum StartTimePolicy {
-  Any = 'ANY'
-}
-
-export interface ResourceProperties {
-  resource_type: ResourceType;
-  resource_size: ResourceSize;
-  resource_feature?: ResourceFeature;
-}
-
-export enum ResourceFeature {
-  Crystal = 'crystal',
-  Panoramic = 'panoramic',
-  Quick = 'quick',
-  SyntheticGrass = 'synthetic_grass',
-  Wall = 'wall'
-}
-
-export enum ResourceSize {
-  Double = 'double',
-  Single = 'single'
-}
-
-export enum ResourceType {
-  Indoor = 'indoor',
-  Outdoor = 'outdoor'
-}
-
 export enum TenantName {
   Anemone = 'anemone',
   Clubpadelrive = 'clubpadelrive',
@@ -195,4 +152,67 @@ export enum TenantName {
 export enum TenantType {
   Anemone = 'ANEMONE',
   Syltekcrm = 'SYLTEKCRM'
+}
+
+export class Tenant {
+  public static readonly RELEVANT_TENANTS = {
+    PADEL_CITY: '19dd692d-32d8-4e22-8a25-989a00b2695f',
+    ALLROUND_PADEL: 'cc65e668-bba9-42f6-8629-31c607c1b899',
+    PLAZA_PADEL: '0bd51db2-7d73-4748-952e-2b628e4e7679'
+  } as const;
+
+  private tenant_raw: TenantRaw;
+  private courts: Court[] = [];
+
+  constructor(tenant_raw: TenantRaw) {
+    this.tenant_raw = clone(tenant_raw);
+    this.courts = this.tenant_raw.resources.map(r => new Court(r));
+  }
+
+  get id(): TenantRaw['tenant_id'] {
+    return this.tenant_raw.tenant_id;
+  }
+
+  get name(): TenantRaw['tenant_name'] {
+    return this.tenant_raw.tenant_name;
+  }
+
+  isRelevant(): boolean {
+    const relevant_tenant_ids: string[] = Object.values(Tenant.RELEVANT_TENANTS);
+    return relevant_tenant_ids.includes(this.tenant_raw.tenant_id);
+  }
+
+  get raw(): TenantRaw {
+    return clone(this.tenant_raw);
+  }
+
+  setAvailability(availability: Availability[]): void {
+    for (const court of this.courts) {
+      court.setAvailability(availability.filter(a => a.id === court.id));
+    }
+  }
+
+  getAvailableCourtsWithSlotsAt(...times: SlotRaw['start_time'][]): Court[] {
+    const courts = clone(this.courts.filter(c => c.isIndoor() && c.isAvailableAt(...times)));
+    courts.forEach(c => c.keepAvailabilitiesWithSlotsAt(...times));
+
+    return courts;
+  }
+
+  summariseAvailableCourtsWithSlotsAt(...times: SlotRaw['start_time'][]): string {
+    const courts = this.getAvailableCourtsWithSlotsAt(...times);
+
+    const summary = [this.name];
+
+    for (const court of courts) {
+      summary.push(`\t${court.name}:`);
+      for (const availability of court.getAvailability()) {
+        summary.push(`\t\t${availability.toString()}`);
+      }
+    }
+
+    if (summary.length === 1) return `${this.name}: 💩`;
+
+    return summary.join('\n');
+  }
 }
