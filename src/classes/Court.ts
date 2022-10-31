@@ -91,8 +91,9 @@ export class Court {
     this.setAvailability(availabilities);
   }
 
-  toString(prefix = ''): string {
-    const availability = this.getAvailability();
-    return availability.map(a => a.toString(`${prefix}\t`)).join('\n');
+  toString(indentationLevel = 0): string {
+    const prefix = '\t'.repeat(indentationLevel);
+    const availability = this.getAvailability().map(a => a.toString(indentationLevel + 1));
+    return `${prefix}${this.name}:\n${availability.join('\n')}`;
   }
 }

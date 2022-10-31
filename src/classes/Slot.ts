@@ -25,7 +25,8 @@ export class Slot {
     return times.includes(this.slotJson.start_time);
   }
 
-  toString(prefix = ''): string {
+  toString(indentationLevel = 0): string {
+    const prefix = '\t'.repeat(indentationLevel);
     return `${prefix}${this.slotJson.start_time} (${this.duration})`;
   }
 }

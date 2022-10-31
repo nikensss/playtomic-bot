@@ -46,8 +46,9 @@ export class Availability {
     this.slots = clone(slots);
   }
 
-  toString(prefix = ''): string {
-    const slots = this.getSlots().map(s => s.toString(`${prefix}\t`));
+  toString(indentationLevel = 0): string {
+    const prefix = '\t'.repeat(indentationLevel);
+    const slots = this.getSlots().map(s => s.toString(indentationLevel + 1));
     return `${prefix}${this.startDate}:\n${slots.join('\n')}`;
   }
 

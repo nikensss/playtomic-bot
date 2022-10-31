@@ -210,10 +210,8 @@ export class Tenant {
   summariseAvailableCourtsWithSlotsAt(...times: SlotJson['start_time'][]): string {
     const courts = this.getAvailableCourtsWithSlotsAt(...times);
 
-    const summary = [`${this.name}:`, ...courts.map(c => c.toString('\t'))];
+    const summary = [`${this.name}:`, ...courts.map(c => c.toString(1))];
 
-    if (summary.length === 1) return `${this.name}: 💩`;
-
-    return summary.join('\n');
+    return summary.length === 1 ? `${this.name}: 💩` : summary.join('\n');
   }
 }
