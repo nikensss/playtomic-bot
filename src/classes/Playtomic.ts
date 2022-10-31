@@ -5,6 +5,7 @@ import { request } from 'undici';
 import { promisify } from 'util';
 import { Availability, AvailabilityJson } from './Availability';
 import { Tenant, TenantJson } from './Tenant';
+import { promises as fs } from 'fs';
 
 const exec = promisify(child_process.exec);
 
@@ -25,7 +26,7 @@ export class Playtomic {
     }
   }
 
-  private async getAccessToken(): Promise<string> {
+  async getAccessToken(): Promise<string> {
     if (!this.access_token) this.access_token = process.env.ACCESS_TOKEN;
     if (!this.access_token || !this.isAccessTokenExpired()) this.access_token = await this.login();
 
@@ -69,6 +70,7 @@ export class Playtomic {
     ).body.json();
 
     console.log('got tenants!');
+    await fs.writeFile('./data/tenants.json', JSON.stringify(tenants, null, 2));
 
     return tenants.map(t => new Tenant(t));
   }
@@ -97,6 +99,7 @@ export class Playtomic {
       availabilities.push(..._availabilities);
     }
 
+    await fs.writeFile('./data/availabilities.json', JSON.stringify(availabilities, null, 2));
     return availabilities;
   }
 }

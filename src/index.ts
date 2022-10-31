@@ -31,6 +31,7 @@ const main = async (): Promise<void> => {
     '19:30:00',
     '20:00:00'
   ];
+
   const summary = relevantTenants.reduce((t, c) => {
     const summary = c.summariseAvailableCourtsWithSlotsAt(...desiredSlots);
 
