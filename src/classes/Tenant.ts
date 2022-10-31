@@ -169,16 +169,12 @@ export class Tenant {
     this.courts = this.tenantJson.resources.map(r => new Court(r));
   }
 
-  get id(): TenantJson['tenant_id'] {
+  getId(): TenantJson['tenant_id'] {
     return this.tenantJson.tenant_id;
   }
 
-  get name(): TenantJson['tenant_name'] {
+  getName(): TenantJson['tenant_name'] {
     return this.tenantJson.tenant_name.trim();
-  }
-
-  get json(): TenantJson {
-    return clone(this.tenantJson);
   }
 
   isRelevant(): boolean {
@@ -210,8 +206,8 @@ export class Tenant {
   summariseAvailableCourtsWithSlotsAt(...times: SlotJson['start_time'][]): string {
     const courts = this.getAvailableCourtsWithSlotsAt(...times);
 
-    const summary = [`${this.name}:`, ...courts.map(c => c.toString(1))];
+    const summary = [`${this.getName()}:`, ...courts.map(c => c.toString(1))];
 
-    return summary.length === 1 ? `${this.name}: 💩` : summary.join('\n');
+    return summary.length === 1 ? `${this.getName()}: 💩` : summary.join('\n');
   }
 }

@@ -13,7 +13,7 @@ export class Slot {
     this.slotJson = clone(slotJson);
   }
 
-  get duration(): SlotJson['duration'] {
+  getDuration(): SlotJson['duration'] {
     return this.slotJson.duration;
   }
 
@@ -36,6 +36,6 @@ export class Slot {
 
   toString(indentationLevel = 0): string {
     const prefix = '\t'.repeat(indentationLevel);
-    return `${prefix}${this.getStartTime()} (${this.duration})`;
+    return `${prefix}${this.getStartTime()} (${this.getDuration()})`;
   }
 }

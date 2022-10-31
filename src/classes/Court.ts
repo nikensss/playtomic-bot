@@ -60,11 +60,11 @@ export class Court {
     this.resource = clone(resource);
   }
 
-  get id(): Resource['resource_id'] {
+  getId(): Resource['resource_id'] {
     return this.resource.resource_id;
   }
 
-  get name(): Resource['name'] {
+  getName(): Resource['name'] {
     return this.resource.name.trim();
   }
 
@@ -73,7 +73,7 @@ export class Court {
   }
 
   setAvailability(availability: Availability[]): void {
-    this.availability = availability.filter(a => a.id === this.id).map(e => clone(e));
+    this.availability = availability.filter(a => a.getId() === this.getId()).map(e => clone(e));
   }
 
   getAvailability(): Availability[] {
@@ -94,6 +94,6 @@ export class Court {
   toString(indentationLevel = 0): string {
     const prefix = '\t'.repeat(indentationLevel);
     const availability = this.getAvailability().map(a => a.toString(indentationLevel + 1));
-    return `${prefix}${this.name}:\n${availability.join('\n')}`;
+    return `${prefix}${this.getName()}:\n${availability.join('\n')}`;
   }
 }

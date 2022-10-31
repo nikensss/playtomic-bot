@@ -17,16 +17,20 @@ export class Availability {
     this.slots = this.availabilityJson.slots.map(slotJson => new Slot(slotJson));
   }
 
-  get id(): AvailabilityJson['resource_id'] {
+  getId(): AvailabilityJson['resource_id'] {
     return this.availabilityJson.resource_id;
   }
 
-  get startDate(): AvailabilityJson['start_date'] {
+  getStartDate(): AvailabilityJson['start_date'] {
     return this.availabilityJson.start_date;
   }
 
+  getDayName(): string {
+    return dayjs(this.getStartDate()).format('dddd').toLowerCase();
+  }
+
   isWeekend(): boolean {
-    return ['saturday', 'sunday'].includes(dayjs(this.startDate).format('dddd').toLowerCase());
+    return ['saturday', 'sunday'].includes(this.getDayName());
   }
 
   isAvailableAt(...times: SlotJson['start_time'][]): boolean {
@@ -49,10 +53,6 @@ export class Availability {
   toString(indentationLevel = 0): string {
     const prefix = '\t'.repeat(indentationLevel);
     const slots = this.getSlots().map(s => s.toString(indentationLevel + 1));
-    return `${prefix}${this.startDate}:\n${slots.join('\n')}`;
-  }
-
-  get json(): AvailabilityJson {
-    return clone(this.availabilityJson);
+    return `${prefix}${this.getStartDate()}:\n${slots.join('\n')}`;
   }
 }
