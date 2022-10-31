@@ -83,7 +83,7 @@ export class Playtomic {
   async getAvailability(tenant: Tenant, dates: Date[]): Promise<Availability[]> {
     const availabilities: Availability[] = [];
     for (const date of dates) {
-      console.log(`getting ${tenant.name} availability for ${date}...`);
+      console.log(`getting ${tenant.name} availability for ${dayjs(date).format('YYYY-MM-DD')}...`);
       const { body } = await request('https://playtomic.io/api/v1/availability', {
         method: 'GET',
         headers: {
