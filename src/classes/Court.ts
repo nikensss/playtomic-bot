@@ -50,6 +50,7 @@ export enum ResourceType {
   Indoor = 'indoor',
   Outdoor = 'outdoor'
 }
+
 export class Court {
   private resource: Resource;
 
@@ -64,7 +65,7 @@ export class Court {
   }
 
   get name(): Resource['name'] {
-    return this.resource.name;
+    return this.resource.name.trim();
   }
 
   isIndoor(): boolean {
@@ -88,5 +89,10 @@ export class Court {
     availabilities.forEach(a => a.keepSlotsAt(...times));
 
     this.setAvailability(availabilities);
+  }
+
+  toString(prefix = ''): string {
+    const availability = this.getAvailability();
+    return availability.map(a => a.toString(`${prefix}\t`)).join('\n');
   }
 }

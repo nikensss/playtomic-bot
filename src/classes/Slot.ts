@@ -25,7 +25,7 @@ export class Slot {
     return times.includes(this.slotJson.start_time);
   }
 
-  toString(): string {
-    return `${this.slotJson.start_time} (${this.duration})`;
+  toString(prefix = ''): string {
+    return `${prefix}${this.slotJson.start_time} (${this.duration})`;
   }
 }

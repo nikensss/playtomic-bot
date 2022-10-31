@@ -1,4 +1,5 @@
 import clone from 'clone';
+import dayjs from 'dayjs';
 import { Slot, SlotJson } from './Slot';
 
 export interface AvailabilityJson {
@@ -24,13 +25,17 @@ export class Availability {
     return this.availabilityJson.start_date;
   }
 
+  isWeekend(): boolean {
+    return ['saturday', 'sunday'].includes(dayjs(this.startDate).format('dddd').toLowerCase());
+  }
+
   isAvailableAt(...times: SlotJson['start_time'][]): boolean {
     return this.getSlots().some(s => s.startsAt(...times) && s.isLongEnough());
   }
 
   keepSlotsAt(...times: SlotJson['start_time'][]): void {
-    const slots = this.getSlots().filter(s => s.startsAt(...times) && s.isLongEnough());
-    this.setSlots(slots);
+    const slots = this.isWeekend() ? [] : this.getSlots();
+    this.setSlots(slots.filter(s => s.startsAt(...times) && s.isLongEnough()));
   }
 
   getSlots(): Slot[] {
@@ -41,9 +46,9 @@ export class Availability {
     this.slots = clone(slots);
   }
 
-  toString(): string {
-    const slots = this.getSlots().map(s => s.toString());
-    return `${this.startDate}: ${slots.join(', ')}`;
+  toString(prefix = ''): string {
+    const slots = this.getSlots().map(s => s.toString(`${prefix}\t`));
+    return `${prefix}${this.startDate}:\n${slots.join('\n')}`;
   }
 
   get json(): AvailabilityJson {

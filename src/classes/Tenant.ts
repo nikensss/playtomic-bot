@@ -174,7 +174,7 @@ export class Tenant {
   }
 
   get name(): TenantJson['tenant_name'] {
-    return this.tenantJson.tenant_name;
+    return this.tenantJson.tenant_name.trim();
   }
 
   get json(): TenantJson {
@@ -210,14 +210,7 @@ export class Tenant {
   summariseAvailableCourtsWithSlotsAt(...times: SlotJson['start_time'][]): string {
     const courts = this.getAvailableCourtsWithSlotsAt(...times);
 
-    const summary = [this.name];
-
-    for (const court of courts) {
-      summary.push(`\t${court.name}:`);
-      for (const availability of court.getAvailability()) {
-        summary.push(`\t\t${availability.toString()}`);
-      }
-    }
+    const summary = [`${this.name}:`, ...courts.map(c => c.toString('\t'))];
 
     if (summary.length === 1) return `${this.name}: 💩`;
 

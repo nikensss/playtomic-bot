@@ -21,7 +21,16 @@ const main = async (): Promise<void> => {
     tenant.setAvailability(await playtomic.getAvailability(tenant, getTwoWeeksOfDates()));
   }
 
-  const desiredSlots: SlotJson['start_time'][] = ['17:00:00', '17:30:00'];
+  const desiredSlots: SlotJson['start_time'][] = [
+    '16:30:00',
+    '17:00:00',
+    '17:30:00',
+    '18:00:00',
+    '18:30:00',
+    '19:00:00',
+    '19:30:00',
+    '20:00:00'
+  ];
   const summary = relevantTenants.reduce((t, c) => {
     const summary = c.summariseAvailableCourtsWithSlotsAt(...desiredSlots);
 
