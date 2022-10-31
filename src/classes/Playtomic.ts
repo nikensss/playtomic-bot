@@ -55,10 +55,7 @@ export class Playtomic {
     const tenants: TenantJson[] = await (
       await request('https://playtomic.io/api/v1/tenants', {
         method: 'GET',
-        headers: {
-          'content-type': 'application/json',
-          authorization: `Bearer ${await this.getAccessToken()}`
-        },
+        headers: { 'content-type': 'application/json' },
         query: {
           user_id: 'me',
           playtomic_status: 'active',
@@ -86,10 +83,7 @@ export class Playtomic {
       console.log(`getting ${tenant.name} availability for ${dayjs(date).format('YYYY-MM-DD')}...`);
       const { body } = await request('https://playtomic.io/api/v1/availability', {
         method: 'GET',
-        headers: {
-          'content-type': 'application/json',
-          authorization: `Bearer ${await this.getAccessToken()}`
-        },
+        headers: { 'content-type': 'application/json' },
         query: {
           user_id: 'me',
           sport_id: 'PADEL',
