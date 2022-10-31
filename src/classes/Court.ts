@@ -1,6 +1,6 @@
 import clone from 'clone';
 import { Availability } from './Availability';
-import { SlotRaw } from './Slot';
+import { SlotJson } from './Slot';
 import { SportID } from './Tenant';
 
 export interface Resource {
@@ -79,11 +79,11 @@ export class Court {
     return this.availability.map(e => clone(e));
   }
 
-  isAvailableAt(...times: SlotRaw['start_time'][]): boolean {
+  isAvailableAt(...times: SlotJson['start_time'][]): boolean {
     return this.availability.some(a => a.isAvailableAt(...times));
   }
 
-  keepAvailabilitiesWithSlotsAt(...times: SlotRaw['start_time'][]): void {
+  keepAvailabilitiesWithSlotsAt(...times: SlotJson['start_time'][]): void {
     const availabilities = this.getAvailability().filter(a => a.isAvailableAt(...times));
     availabilities.forEach(a => a.keepSlotsAt(...times));
 

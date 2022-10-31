@@ -1,35 +1,36 @@
 import clone from 'clone';
-import { Slot, SlotRaw } from './Slot';
+import { Slot, SlotJson } from './Slot';
 
-export interface AvailabilityRaw {
+export interface AvailabilityJson {
   resource_id: string;
   start_date: Date;
-  slots: SlotRaw[];
+  slots: SlotJson[];
 }
 
 export class Availability {
-  private availabilityRaw: AvailabilityRaw;
+  private availabilityJson: AvailabilityJson;
   private slots: Slot[];
 
-  constructor(availabilityRaw: AvailabilityRaw) {
-    this.availabilityRaw = clone(availabilityRaw);
-    this.slots = this.availabilityRaw.slots.map(slotRaw => new Slot(slotRaw));
+  constructor(availabilityJson: AvailabilityJson) {
+    this.availabilityJson = clone(availabilityJson);
+    this.slots = this.availabilityJson.slots.map(slotJson => new Slot(slotJson));
   }
 
-  get id(): AvailabilityRaw['resource_id'] {
-    return this.availabilityRaw.resource_id;
+  get id(): AvailabilityJson['resource_id'] {
+    return this.availabilityJson.resource_id;
   }
 
-  get start_date(): AvailabilityRaw['start_date'] {
-    return this.availabilityRaw.start_date;
+  get startDate(): AvailabilityJson['start_date'] {
+    return this.availabilityJson.start_date;
   }
 
-  isAvailableAt(...times: SlotRaw['start_time'][]): boolean {
-    return this.slots.some(s => s.startsAt(...times) && s.isLongEnough());
+  isAvailableAt(...times: SlotJson['start_time'][]): boolean {
+    return this.getSlots().some(s => s.startsAt(...times) && s.isLongEnough());
   }
 
-  keepSlotsAt(...times: SlotRaw['start_time'][]): void {
-    this.slots = this.slots.filter(s => s.startsAt(...times) && s.isLongEnough());
+  keepSlotsAt(...times: SlotJson['start_time'][]): void {
+    const slots = this.getSlots().filter(s => s.startsAt(...times) && s.isLongEnough());
+    this.setSlots(slots);
   }
 
   getSlots(): Slot[] {
@@ -44,7 +45,7 @@ export class Availability {
     return `${this.start_date}: ${slots}`;
   }
 
-  get raw(): AvailabilityRaw {
-    return clone(this.availabilityRaw);
+  get json(): AvailabilityJson {
+    return clone(this.availabilityJson);
   }
 }

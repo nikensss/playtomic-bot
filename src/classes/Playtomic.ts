@@ -3,8 +3,8 @@ import dayjs from 'dayjs';
 import jwt from 'jsonwebtoken';
 import { request } from 'undici';
 import { promisify } from 'util';
-import { Availability, AvailabilityRaw } from './Availability';
-import { Tenant, TenantRaw } from './Tenant';
+import { Availability, AvailabilityJson } from './Availability';
+import { Tenant, TenantJson } from './Tenant';
 
 const exec = promisify(child_process.exec);
 
@@ -52,7 +52,7 @@ export class Playtomic {
 
   async getTenants(): Promise<Tenant[]> {
     console.log('getting tenants...');
-    const tenants: TenantRaw[] = await (
+    const tenants: TenantJson[] = await (
       await request('https://playtomic.io/api/v1/tenants', {
         method: 'GET',
         headers: {
@@ -84,7 +84,7 @@ export class Playtomic {
     const availabilities: Availability[] = [];
     for (const date of dates) {
       console.log(`getting ${tenant.name} availability for ${date}...`);
-      const availabilityResponse = await request('https://playtomic.io/api/v1/availability', {
+      const { body } = await request('https://playtomic.io/api/v1/availability', {
         method: 'GET',
         headers: {
           'content-type': 'application/json',
@@ -99,7 +99,7 @@ export class Playtomic {
         }
       });
 
-      const _availabilities = (await availabilityResponse.body.json()).map((e: AvailabilityRaw) => new Availability(e));
+      const _availabilities = (await body.json()).map((e: AvailabilityJson) => new Availability(e));
       availabilities.push(..._availabilities);
     }
 

@@ -1,9 +1,9 @@
 import clone from 'clone';
 import { Availability } from './Availability';
 import { Court, Resource } from './Court';
-import { SlotRaw } from './Slot';
+import { SlotJson } from './Slot';
 
-export interface TenantRaw {
+export interface TenantJson {
   default_currency: DefaultCurrency;
   tenant_id: string;
   tenant_uid: string;
@@ -161,25 +161,29 @@ export class Tenant {
     PLAZA_PADEL: '0bd51db2-7d73-4748-952e-2b628e4e7679'
   } as const;
 
-  private tenantRaw: TenantRaw;
+  private tenantJson: TenantJson;
   private courts: Court[] = [];
 
-  constructor(tenantRaw: TenantRaw) {
-    this.tenantRaw = clone(tenantRaw);
-    this.courts = this.tenantRaw.resources.map(r => new Court(r));
+  constructor(tenantJson: TenantJson) {
+    this.tenantJson = clone(tenantJson);
+    this.courts = this.tenantJson.resources.map(r => new Court(r));
   }
 
-  get id(): TenantRaw['tenant_id'] {
-    return this.tenantRaw.tenant_id;
+  get id(): TenantJson['tenant_id'] {
+    return this.tenantJson.tenant_id;
   }
 
-  get name(): TenantRaw['tenant_name'] {
-    return this.tenantRaw.tenant_name;
+  get name(): TenantJson['tenant_name'] {
+    return this.tenantJson.tenant_name;
+  }
+
+  get json(): TenantJson {
+    return clone(this.tenantJson);
   }
 
   isRelevant(): boolean {
     const relevant_tenant_ids: string[] = Object.values(Tenant.RELEVANT_TENANTS);
-    return relevant_tenant_ids.includes(this.tenantRaw.tenant_id);
+    return relevant_tenant_ids.includes(this.tenantJson.tenant_id);
   }
 
   get raw(): TenantRaw {
@@ -192,14 +196,14 @@ export class Tenant {
     }
   }
 
-  getAvailableCourtsWithSlotsAt(...times: SlotRaw['start_time'][]): Court[] {
+  getAvailableCourtsWithSlotsAt(...times: SlotJson['start_time'][]): Court[] {
     const courts = clone(this.courts.filter(c => c.isIndoor() && c.isAvailableAt(...times)));
     courts.forEach(c => c.keepAvailabilitiesWithSlotsAt(...times));
 
     return courts;
   }
 
-  summariseAvailableCourtsWithSlotsAt(...times: SlotRaw['start_time'][]): string {
+  summariseAvailableCourtsWithSlotsAt(...times: SlotJson['start_time'][]): string {
     const courts = this.getAvailableCourtsWithSlotsAt(...times);
 
     const summary = [this.name];

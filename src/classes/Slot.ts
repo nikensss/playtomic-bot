@@ -1,31 +1,31 @@
 import clone from 'clone';
 
-export interface SlotRaw {
+export interface SlotJson {
   start_time: `${string}:${string}:${string}`;
   duration: number;
   price: `${number} ${string}`;
 }
 
 export class Slot {
-  private slotRaw: SlotRaw;
+  private slotJson: SlotJson;
 
-  constructor(slotRaw: SlotRaw) {
-    this.slotRaw = clone(slotRaw);
+  constructor(slotJson: SlotJson) {
+    this.slotJson = clone(slotJson);
   }
 
-  get duration(): SlotRaw['duration'] {
-    return this.slotRaw.duration;
+  get duration(): SlotJson['duration'] {
+    return this.slotJson.duration;
   }
 
   isLongEnough(): boolean {
-    return [90, 120].includes(this.slotRaw.duration);
+    return this.slotJson.duration >= 90;
   }
 
-  startsAt(...times: SlotRaw['start_time'][]): boolean {
-    return times.includes(this.slotRaw.start_time);
+  startsAt(...times: SlotJson['start_time'][]): boolean {
+    return times.includes(this.slotJson.start_time);
   }
 
   toString(): string {
-    return `${this.slotRaw.start_time} (${this.duration})`;
+    return `${this.slotJson.start_time} (${this.duration})`;
   }
 }
