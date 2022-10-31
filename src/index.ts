@@ -22,8 +22,6 @@ const main = async (): Promise<void> => {
   }
 
   const desiredSlots: SlotJson['start_time'][] = [
-    '16:30:00',
-    '17:00:00',
     '17:30:00',
     '18:00:00',
     '18:30:00',
