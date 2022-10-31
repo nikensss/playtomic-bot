@@ -1,11 +1,11 @@
 import child_process from 'child_process';
 import dayjs from 'dayjs';
+import { promises as fs } from 'fs';
 import jwt from 'jsonwebtoken';
 import { request } from 'undici';
 import { promisify } from 'util';
 import { Availability, AvailabilityJson } from './Availability';
 import { Tenant, TenantJson } from './Tenant';
-import { promises as fs } from 'fs';
 
 const exec = promisify(child_process.exec);
 
@@ -52,7 +52,7 @@ export class Playtomic {
   }
 
   async getTenants(): Promise<Tenant[]> {
-    console.log('getting tenants...');
+    console.log('Getting tenants...');
     const tenants: TenantJson[] = await (
       await request('https://playtomic.io/api/v1/tenants', {
         method: 'GET',
@@ -69,7 +69,7 @@ export class Playtomic {
       })
     ).body.json();
 
-    console.log('got tenants!');
+    console.log('Got tenants!');
     await fs.writeFile('./data/tenants.json', JSON.stringify(tenants, null, 2));
 
     return tenants.map(t => new Tenant(t));
@@ -81,23 +81,28 @@ export class Playtomic {
 
   async getAvailability(tenant: Tenant, dates: Date[]): Promise<Availability[]> {
     const availabilities: Availability[] = [];
-    for (const date of dates) {
-      console.log(`getting ${tenant.getName()} availability for ${dayjs(date).format('YYYY-MM-DD')}...`);
-      const { body } = await request('https://playtomic.io/api/v1/availability', {
+
+    console.log(`Getting availabilities for ${tenant.getName()}`);
+    const requests: Promise<AvailabilityJson[]>[] = dates.map(async d => {
+      const r = await request('https://playtomic.io/api/v1/availability', {
         method: 'GET',
         headers: { 'content-type': 'application/json' },
         query: {
           user_id: 'me',
           sport_id: 'PADEL',
           tenant_id: tenant.getId(),
-          local_start_min: dayjs(date).startOf('day').format('YYYY-MM-DDTHH:mm:ss'),
-          local_start_max: dayjs(date).endOf('day').format('YYYY-MM-DDTHH:mm:ss')
+          local_start_min: dayjs(d).startOf('day').format('YYYY-MM-DDTHH:mm:ss'),
+          local_start_max: dayjs(d).endOf('day').format('YYYY-MM-DDTHH:mm:ss')
         }
       });
+      return await r.body.json();
+    });
 
-      const _availabilities = (await body.json()).map((e: AvailabilityJson) => new Availability(e));
-      availabilities.push(..._availabilities);
-    }
+    (await Promise.all(requests))
+      .flat()
+      .map(e => new Availability(e))
+      .forEach(e => availabilities.push(e));
+    console.log(`Got availabilities for ${tenant.getName()}`);
 
     await fs.writeFile('./data/availabilities.json', JSON.stringify(availabilities, null, 2));
     return availabilities;
