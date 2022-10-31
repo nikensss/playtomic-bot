@@ -72,7 +72,7 @@ export class Court {
   }
 
   setAvailability(availability: Availability[]): void {
-    this.availability = availability.map(e => clone(e));
+    this.availability = availability.filter(a => a.id === this.id).map(e => clone(e));
   }
 
   getAvailability(): Availability[] {

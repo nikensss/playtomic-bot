@@ -37,12 +37,13 @@ export class Availability {
     return clone(this.slots);
   }
 
-  toString(): string {
-    const slots = this.getSlots()
-      .map(s => s.toString())
-      .join(', ');
+  setSlots(slots: Slot[]): void {
+    this.slots = clone(slots);
+  }
 
-    return `${this.start_date}: ${slots}`;
+  toString(): string {
+    const slots = this.getSlots().map(s => s.toString());
+    return `${this.startDate}: ${slots.join(', ')}`;
   }
 
   get json(): AvailabilityJson {

@@ -186,14 +186,18 @@ export class Tenant {
     return relevant_tenant_ids.includes(this.tenantJson.tenant_id);
   }
 
-  get raw(): TenantRaw {
-    return clone(this.tenantRaw);
+  getCourts(): Court[] {
+    return clone(this.courts);
+  }
+
+  setCourts(courts: Court[]): void {
+    this.courts = clone(courts);
   }
 
   setAvailability(availability: Availability[]): void {
-    for (const court of this.courts) {
-      court.setAvailability(availability.filter(a => a.id === court.id));
-    }
+    const courts = this.getCourts();
+    courts.forEach(c => c.setAvailability(availability));
+    this.setCourts(courts);
   }
 
   getAvailableCourtsWithSlotsAt(...times: SlotJson['start_time'][]): Court[] {
