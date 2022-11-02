@@ -4,6 +4,7 @@ import { promises as fs } from 'fs';
 import jwt from 'jsonwebtoken';
 import { request } from 'undici';
 import { promisify } from 'util';
+import { logger } from '.';
 import { Availability, AvailabilityJson } from './Availability';
 import { Tenant, TenantJson } from './Tenant';
 
@@ -52,7 +53,7 @@ export class Playtomic {
   }
 
   async getTenants(): Promise<Tenant[]> {
-    console.log('Getting tenants...');
+    logger.info('Getting tenants...');
     const tenants: TenantJson[] = await (
       await request('https://playtomic.io/api/v1/tenants', {
         method: 'GET',
@@ -69,7 +70,7 @@ export class Playtomic {
       })
     ).body.json();
 
-    console.log('Got tenants!');
+    logger.info('Got tenants!');
     await fs.writeFile('./data/tenants.json', JSON.stringify(tenants, null, 2));
 
     return tenants.map(t => new Tenant(t));
@@ -82,7 +83,8 @@ export class Playtomic {
   async getAvailability(tenant: Tenant, dates: Date[]): Promise<Availability[]> {
     const availabilities: Availability[] = [];
 
-    console.log(`Getting availabilities for ${tenant.getName()}`);
+    logger.info(`Getting availabilities for ${tenant.getName()}`);
+
     const requests: Promise<AvailabilityJson[]>[] = dates.map(async d => {
       const r = await request('https://playtomic.io/api/v1/availability', {
         method: 'GET',
@@ -102,7 +104,8 @@ export class Playtomic {
       .flat()
       .map(e => new Availability(e))
       .forEach(e => availabilities.push(e));
-    console.log(`Got availabilities for ${tenant.getName()}`);
+
+    logger.info(`Got availabilities for ${tenant.getName()}`);
 
     await fs.writeFile('./data/availabilities.json', JSON.stringify(availabilities, null, 2));
     return availabilities;
