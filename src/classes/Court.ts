@@ -72,8 +72,9 @@ export class Court {
     return this.resource.properties.resource_type === 'indoor';
   }
 
-  setAvailability(availability: Availability[]): void {
+  setAvailability(availability: Availability[]): this {
     this.availability = clone(availability).filter(a => a.getId() === this.getId());
+    return this;
   }
 
   getAvailability(): Availability[] {
@@ -86,9 +87,7 @@ export class Court {
 
   keepAvailabilitiesWithSlotsAt(...times: SlotJson['start_time'][]): this {
     const availabilities = this.getAvailability().map(a => a.keepSlotsAt(...times));
-    this.setAvailability(availabilities.filter(a => a.isAvailableAt(...times)));
-
-    return this;
+    return this.setAvailability(availabilities.filter(a => a.isAvailableAt(...times)));
   }
 
   toString(indentationLevel = 0): string {

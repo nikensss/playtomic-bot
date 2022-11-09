@@ -186,14 +186,14 @@ export class Tenant {
     return clone(this.courts);
   }
 
-  setCourts(courts: Court[]): void {
+  setCourts(courts: Court[]): this {
     this.courts = clone(courts);
+    return this;
   }
 
-  setAvailability(availability: Availability[]): void {
+  setAvailability(availability: Availability[]): this {
     const courts = this.getCourts();
-    courts.forEach(c => c.setAvailability(availability));
-    this.setCourts(courts);
+    return this.setCourts(courts.map(c => c.setAvailability(availability)));
   }
 
   getCourtsAvailableAt(...times: SlotJson['start_time'][]): Court[] {

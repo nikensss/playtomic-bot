@@ -35,17 +35,16 @@ export class Availability {
 
   keepSlotsAt(...times: SlotJson['start_time'][]): this {
     const slots = this.getSlots().filter(s => s.startsAt(...times) && s.isLongEnough());
-    this.setSlots(slots);
-
-    return this;
+    return this.setSlots(slots);
   }
 
   getSlots(): Slot[] {
     return clone(this.slots);
   }
 
-  setSlots(slots: Slot[]): void {
+  setSlots(slots: Slot[]): this {
     this.slots = clone(slots);
+    return this;
   }
 
   toString(indentationLevel = 0): string {
