@@ -29,17 +29,13 @@ export class Availability {
     return dayjs(this.getStartDate()).format('dddd').toLowerCase();
   }
 
-  isWeekend(): boolean {
-    return ['saturday', 'sunday'].includes(this.getDayName());
-  }
-
   isAvailableAt(...times: SlotJson['start_time'][]): boolean {
     return this.getSlots().some(s => s.startsAt(...times) && s.isLongEnough());
   }
 
   keepSlotsAt(...times: SlotJson['start_time'][]): void {
-    const slots = this.isWeekend() ? [] : this.getSlots();
-    this.setSlots(slots.filter(s => s.startsAt(...times) && s.isLongEnough()));
+    const slots = this.getSlots().filter(s => s.startsAt(...times) && s.isLongEnough());
+    this.setSlots(slots);
   }
 
   getSlots(): Slot[] {

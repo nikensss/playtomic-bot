@@ -7,7 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "prebuild": "rimraf ./dist",
     "build": "tsc",
-    "prestart": "$npm_execpath run build",
+    "prestart": "npm run build",
     "start": "node -r dotenv/config dist/index.js",
     "start:dev": "nodemon -r dotenv/config src/index.ts",
     "pretty": "prettier --write 'src/**/*.ts'",
