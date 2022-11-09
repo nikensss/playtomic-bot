@@ -73,22 +73,22 @@ export class Court {
   }
 
   setAvailability(availability: Availability[]): void {
-    this.availability = availability.filter(a => a.getId() === this.getId()).map(e => clone(e));
+    this.availability = clone(availability).filter(a => a.getId() === this.getId());
   }
 
   getAvailability(): Availability[] {
-    return this.availability.map(e => clone(e));
+    return clone(this.availability);
   }
 
   isAvailableAt(...times: SlotJson['start_time'][]): boolean {
     return this.availability.some(a => a.isAvailableAt(...times));
   }
 
-  keepAvailabilitiesWithSlotsAt(...times: SlotJson['start_time'][]): void {
-    const availabilities = this.getAvailability().filter(a => a.isAvailableAt(...times));
-    availabilities.forEach(a => a.keepSlotsAt(...times));
+  keepAvailabilitiesWithSlotsAt(...times: SlotJson['start_time'][]): this {
+    const availabilities = this.getAvailability().map(a => a.keepSlotsAt(...times));
+    this.setAvailability(availabilities.filter(a => a.isAvailableAt(...times)));
 
-    this.setAvailability(availabilities);
+    return this;
   }
 
   toString(indentationLevel = 0): string {

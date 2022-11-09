@@ -196,16 +196,16 @@ export class Tenant {
     this.setCourts(courts);
   }
 
-  getAvailableCourtsWithSlotsAt(...times: SlotJson['start_time'][]): Court[] {
-    const courts = clone(this.courts.filter(c => c.isIndoor() && c.isAvailableAt(...times)));
-    courts.forEach(c => c.keepAvailabilitiesWithSlotsAt(...times));
-
-    return courts;
+  getCourtsAvailableAt(...times: SlotJson['start_time'][]): Court[] {
+    return this.getCourts()
+      .filter(c => c.isIndoor() && c.isAvailableAt(...times))
+      .map(c => c.keepAvailabilitiesWithSlotsAt(...times));
   }
 
   summary(...times: SlotJson['start_time'][]): string {
-    const courts = this.getAvailableCourtsWithSlotsAt(...times);
+    const courts = this.getCourtsAvailableAt(...times);
     const summary = [`${this.getName()}:`, ...courts.map(c => c.toString(1))];
+
     return summary.length === 1 ? `${this.getName()}: 💩` : summary.join('\n');
   }
 }
