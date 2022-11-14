@@ -18,7 +18,7 @@ export class Telegram {
   }
 
   init(): this {
-    this.bot.onText(/\/check/, async msg => {
+    this.bot.onText(/\/courts/, async msg => {
       try {
         logger.info({ msg });
         await this.bot.sendMessage(msg.chat.id, 'Let me check for you, just a moment...');
