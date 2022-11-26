@@ -1,10 +1,6 @@
-import { promises as fs } from 'fs';
-import TelegramBot from 'node-telegram-bot-api';
+import TelegramBot, { User } from 'node-telegram-bot-api';
 import { logger } from '.';
-import { getTwoWeeksOfDates } from '../utils';
-import { Playtomic } from './Playtomic';
-import { SlotJson } from './Slot';
-import { Tenant } from './Tenant';
+import { PlaytomicBotApi } from './PlaytomicBotApi';
 
 export class Telegram {
   private token: string;
@@ -18,17 +14,8 @@ export class Telegram {
   }
 
   init(): this {
-    this.bot.onText(/\/courts/, async msg => {
-      try {
-        logger.info({ msg });
-        await this.bot.sendMessage(msg.chat.id, 'Let me check for you, just a moment...');
-        const messages = (await this.onCheck()).map(s => this.bot.sendMessage(msg.chat.id, s));
-        await Promise.all(messages);
-      } catch (err) {
-        logger.error({ err });
-        await this.sendError(err, msg);
-      }
-    });
+    this.bot.onText(/\/courts/, msg => this.courts(msg));
+
 
     this.bot.onText(/\/ping/, msg => this.sendMessage(msg.chat.id, 'pong'));
 
@@ -56,25 +43,27 @@ export class Telegram {
     }
   }
 
-  private async onCheck(): Promise<string[]> {
-    const playtomic = new Playtomic(process.env.EMAIL, process.env.PASSWORD);
-    const relevantTenants: Tenant[] = await playtomic.getRelevantTenants();
-    for (const tenant of relevantTenants) {
-      tenant.setAvailability(await playtomic.getAvailability(tenant, getTwoWeeksOfDates()));
+  private async courts(msg: TelegramBot.Message): Promise<void> {
+    try {
+      logger.info({ msg });
+      const user = msg.from;
+      if (!user) throw new Error('User info missing in message');
+
+      await this.bot.sendMessage(msg.chat.id, 'Let me check for you, just a moment...');
+      const messages = (await this.getCourtsAvailability(user)).map(s => this.bot.sendMessage(msg.chat.id, s));
+
+      await Promise.all(messages);
+    } catch (err) {
+      logger.error({ err });
+      await this.sendError(err, msg);
     }
+  }
 
-    const desiredSlots: SlotJson['start_time'][] = [
-      '17:30:00',
-      '18:00:00',
-      '18:30:00',
-      '19:00:00',
-      '19:30:00',
-      '20:00:00'
-    ];
+  private async getCourtsAvailability(user: User): Promise<string[]> {
+    const [url, secret] = [process.env.PLAYTOMIC_BOT_API, process.env.JWT_SECRET];
+    if (!url) throw new Error('Missing Playtomic Bot API URL');
+    if (!secret) throw new Error('Missing JWT secret');
 
-    const summaries = relevantTenants.map(t => t.summary(...desiredSlots));
-
-    await fs.writeFile('./data/summary.txt', summaries.join('\n\n'));
-    return summaries;
+    return await new PlaytomicBotApi(url, secret).availability(user);
   }
 }
