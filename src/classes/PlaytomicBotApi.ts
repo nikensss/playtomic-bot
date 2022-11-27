@@ -103,6 +103,26 @@ export class PlaytomicBotApi {
     const response = await request(`${this.url}/users/preferred-times`, { headers: { authorization } });
     return await response.body.json();
   }
+
+  async savePreferredTime(time: string): Promise<boolean> {
+    const { statusCode } = await request(`${this.url}/users/preferred-times`, {
+      method: 'POST',
+      body: JSON.stringify({ time }),
+      headers: { authorization: this.authorization, 'content-type': 'application/json' }
+    });
+
+    return 200 <= statusCode && statusCode < 300;
+  }
+
+  async deletePreferredTime(time: string): Promise<boolean> {
+    const { statusCode } = await request(`${this.url}/users/preferred-times`, {
+      method: 'DELETE',
+      body: JSON.stringify({ time }),
+      headers: { authorization: this.authorization, 'content-type': 'application/json' }
+    });
+
+    return 200 <= statusCode && statusCode < 300;
+  }
 }
 
 const toSummarizedClub = ({ tenant_id, tenant_name, address }: PlaytomicBotApiClub): SummarizedClub => {

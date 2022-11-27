@@ -23,6 +23,9 @@ export class Telegram {
     this.bot.onText(/\/delete-club/, msg => this.deleteClub(msg));
 
     this.bot.onText(/\/show-preferred-times/, msg => this.showHours(msg));
+    this.bot.onText(/\/add-preferred-time /, msg => this.addPreferredTime(msg));
+    this.bot.onText(/\/delete-preferred-time /, msg => this.deletePreferredTime(msg));
+
     this.bot.on('callback_query', async msg => this.callbackQuery(msg));
 
     this.sendAdminMessage("I'm listening...").catch(err => logger.error({ err }));
@@ -129,7 +132,7 @@ export class Telegram {
       message_id: msg.message?.message_id
     });
 
-    const saved = await new PlaytomicBotApi(user).saveClub(club.id);
+    const saved = await new PlaytomicBotApi(user).savePreferredClub(club.id);
 
     const chatId = msg.message?.chat.id;
     if (!chatId) return logger.error({ err: new Error('Missing chat ID in message info'), msg });
@@ -176,5 +179,26 @@ export class Telegram {
 
     const hours = (await new PlaytomicBotApi(user).getPreferredTimes()).join('\n');
     await this.bot.sendMessage(msg.chat.id, `Your preferred playing times are:\n${hours}`);
+  }
+
+  private async addPreferredTime(msg: Message): Promise<void> {
+    const [user, time] = [msg.from, msg.text?.replace(/^\/add-preferred-time (.*)?$/, '$1')];
+    if (!user) throw new Error('User info missing');
+    if (!time) return void (await this.bot.sendMessage(msg.chat.id, 'Please, add a time to the command'));
+
+    const saved = await new PlaytomicBotApi(user).savePreferredTime(time);
+    if (saved) return void (await this.bot.sendMessage(msg.chat.id, 'Preferred time added!'));
+    return void (await this.bot.sendMessage(msg.chat.id, 'I could not add it... 😢'));
+  }
+
+  private async deletePreferredTime(msg: Message): Promise<void> {
+    const [user, time] = [msg.from, msg.text?.replace(/^\/delete-preferred-time (.*)?$/, '$1')];
+    if (!user) throw new Error('User info missing');
+    if (!time) return void (await this.bot.sendMessage(msg.chat.id, 'Please, add a time to the command'));
+
+    const saved = await new PlaytomicBotApi(user).deletePreferredTime(time);
+
+    if (saved) return void (await this.bot.sendMessage(msg.chat.id, 'Preferred time deleted!'));
+    return void (await this.bot.sendMessage(msg.chat.id, 'I could not delete it... 😢'));
   }
 }
