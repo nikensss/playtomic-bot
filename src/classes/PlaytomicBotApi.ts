@@ -61,20 +61,25 @@ export class PlaytomicBotApi {
     });
   }
 
-  async findClub(name: string): Promise<{ title: string; id: string }[]> {
-    const authorization = this.authorization;
-    const response = await request(`${this.url}/playtomic/clubs`, { query: { name }, headers: { authorization } });
+  async findClub(name: string): Promise<SummarizedClub[]> {
+    const response = await request(`${this.url}/playtomic/clubs`, { query: { name } });
     return (await response.body.json()).map(toSummarizedClub);
   }
 
-  async getClubInfo(clubId: string): Promise<{ title: string; id: string }> {
+  async getClubInfo(clubId: string): Promise<SummarizedClub> {
     const authorization = this.authorization;
     const response = await request(`${this.url}/playtomic/clubs/${clubId}`, { headers: { authorization } });
     return toSummarizedClub(await response.body.json());
   }
 
+  async getPreferredClubs(): Promise<string[]> {
+    const authorization = this.authorization;
+    const response = await request(`${this.url}/users/preferred-clubs`, { headers: { authorization } });
+    return await response.body.json();
+  }
+
   async saveClub(clubId: string): Promise<boolean> {
-    const { statusCode } = await request(`${this.url}/users/preferred-club`, {
+    const { statusCode } = await request(`${this.url}/users/preferred-clubs`, {
       method: 'POST',
       body: JSON.stringify({ clubId }),
       headers: { authorization: this.authorization, 'content-type': 'application/json' }

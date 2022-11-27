@@ -14,13 +14,11 @@ export class Telegram {
   }
 
   init(): this {
-    this.bot.onText(/\/courts /, msg => this.courts(msg));
-
+    this.bot.onText(/\/id/, msg => this.sendMessage(msg.chat.id, `${msg.chat.id}`));
+    this.bot.onText(/\/ping/, msg => this.sendMessage(msg.chat.id, 'pong'));
+    this.bot.onText(/\/courts/, msg => this.courts(msg));
     this.bot.onText(/\/add-club /, msg => this.addClub(msg));
-
-    this.bot.onText(/\/ping /, msg => this.sendMessage(msg.chat.id, 'pong'));
-
-    this.bot.onText(/\/id /, msg => this.sendMessage(msg.chat.id, `${msg.chat.id}`));
+    this.bot.onText(/\/show-clubs/, msg => this.showClubs(msg));
 
     this.bot.on('callback_query', async msg => this.callbackQuery(msg));
 
@@ -87,6 +85,18 @@ export class Telegram {
     return await new PlaytomicBotApi(user).availability();
   }
 
+  private async showClubs(msg: Message): Promise<void> {
+    const user = msg.from;
+    if (!user) throw new Error('User info missing');
+
+    const playtomicBotApi = new PlaytomicBotApi(user);
+    const clubIds = await playtomicBotApi.getPreferredClubs();
+    const clubs = await Promise.all(clubIds.map(c => playtomicBotApi.getClubInfo(c)));
+
+    await this.bot.sendMessage(msg.chat.id, `You have ${clubs.length} favorite clubs:`);
+    await Promise.all(clubs.map(c => this.bot.sendMessage(msg.chat.id, c.title)));
+  }
+
   private async addClub(msg: Message): Promise<void> {
     const [name, user] = [msg.text?.replace(/^\/add-club (.*)$/, '$1'), msg.from];
 
@@ -102,7 +112,6 @@ export class Telegram {
   private async addClubCallbackQuery(msg: TelegramBot.CallbackQuery, data: string): Promise<void> {
     const user = msg.from;
     if (!user) return logger.error({ err: new Error(`Cannot identify user!`), msg });
-
     if (!data) return logger.error({ err: new Error('Mising club ID!'), msg, data });
 
     const club = await new PlaytomicBotApi(user).getClubInfo(data);
@@ -118,5 +127,17 @@ export class Telegram {
 
     if (saved) return void (await this.bot.sendMessage(chatId, 'Saved!'));
     return void (await this.bot.sendMessage(chatId, 'I could not save it, sorry... 😢'));
+  }
+
+  private async showClubs(msg: Message): Promise<void> {
+    const user = msg.from;
+    if (!user) throw new Error('User info missing');
+
+    const playtomicBotApi = new PlaytomicBotApi(user);
+    const clubIds = await playtomicBotApi.getPreferredClubs();
+    const clubs = await Promise.all(clubIds.map(c => playtomicBotApi.getClubInfo(c)));
+
+    await this.bot.sendMessage(msg.chat.id, `You have ${clubs.length} favorite clubs:`);
+    await Promise.all(clubs.map(c => this.bot.sendMessage(msg.chat.id, c.title)));
   }
 }
