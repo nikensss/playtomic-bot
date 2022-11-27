@@ -1,6 +1,6 @@
 import TelegramBot, { Message, User, ChatId } from 'node-telegram-bot-api';
 import { logger } from '.';
-import { PlaytomicBotApi } from './PlaytomicBotApi';
+import { PlaytomicBotApi, SummarizedClub } from './PlaytomicBotApi';
 
 export class Telegram {
   private token: string;
@@ -17,8 +17,9 @@ export class Telegram {
     this.bot.onText(/\/id/, msg => this.sendMessage(msg.chat.id, `${msg.chat.id}`));
     this.bot.onText(/\/ping/, msg => this.sendMessage(msg.chat.id, 'pong'));
     this.bot.onText(/\/courts/, msg => this.courts(msg));
-    this.bot.onText(/\/add-club /, msg => this.addClub(msg));
     this.bot.onText(/\/show-clubs/, msg => this.showClubs(msg));
+    this.bot.onText(/\/add-club /, msg => this.addClub(msg));
+    this.bot.onText(/\/delete-club/, msg => this.deleteClub(msg));
 
     this.bot.on('callback_query', async msg => this.callbackQuery(msg));
 
@@ -60,6 +61,9 @@ export class Telegram {
       case 'add-club':
         await this.addClubCallbackQuery(msg, data);
         break;
+      case 'delete-club':
+        await this.deleteClubCallackQuery(msg, data);
+        break;
       default:
         logger.error({ err: new Error(`Unknown origin on callback query: ${origin}`), msg });
     }
@@ -85,14 +89,17 @@ export class Telegram {
     return await new PlaytomicBotApi(user).availability();
   }
 
+  private async getUserClubs(user: User): Promise<SummarizedClub[]> {
+    const playtomicBotApi = new PlaytomicBotApi(user);
+    const clubIds = await playtomicBotApi.getPreferredClubs();
+    return await Promise.all(clubIds.map(c => playtomicBotApi.getClubInfo(c)));
+  }
+
   private async showClubs(msg: Message): Promise<void> {
     const user = msg.from;
     if (!user) throw new Error('User info missing');
 
-    const playtomicBotApi = new PlaytomicBotApi(user);
-    const clubIds = await playtomicBotApi.getPreferredClubs();
-    const clubs = await Promise.all(clubIds.map(c => playtomicBotApi.getClubInfo(c)));
-
+    const clubs = await this.getUserClubs(user);
     await this.bot.sendMessage(msg.chat.id, `You have ${clubs.length} favorite clubs:`);
     await Promise.all(clubs.map(c => this.bot.sendMessage(msg.chat.id, c.title)));
   }
@@ -129,15 +136,35 @@ export class Telegram {
     return void (await this.bot.sendMessage(chatId, 'I could not save it, sorry... 😢'));
   }
 
-  private async showClubs(msg: Message): Promise<void> {
+  private async deleteClub(msg: Message): Promise<void> {
     const user = msg.from;
     if (!user) throw new Error('User info missing');
 
-    const playtomicBotApi = new PlaytomicBotApi(user);
-    const clubIds = await playtomicBotApi.getPreferredClubs();
-    const clubs = await Promise.all(clubIds.map(c => playtomicBotApi.getClubInfo(c)));
+    const clubs = await this.getUserClubs(user);
+    const inline_keyboard = clubs.map(c => {
+      return [{ text: c.title, callback_data: this.toCallbackData('delete-club', c.id) }];
+    });
 
-    await this.bot.sendMessage(msg.chat.id, `You have ${clubs.length} favorite clubs:`);
-    await Promise.all(clubs.map(c => this.bot.sendMessage(msg.chat.id, c.title)));
+    await this.bot.sendMessage(msg.chat.id, 'Which one do you want to remove?', { reply_markup: { inline_keyboard } });
+  }
+
+  private async deleteClubCallackQuery(msg: TelegramBot.CallbackQuery, data: string): Promise<void> {
+    const user = msg.from;
+    if (!user) return logger.error({ err: new Error(`Cannot identify user!`), msg });
+    if (!data) return logger.error({ err: new Error('Mising club ID!'), msg, data });
+
+    const club = await new PlaytomicBotApi(user).getClubInfo(data);
+    await this.bot.editMessageText(`Ok, I'm deleting ${club.title}`, {
+      chat_id: msg.message?.chat.id,
+      message_id: msg.message?.message_id
+    });
+
+    const deleted = await new PlaytomicBotApi(user).deleteClub(club.id);
+
+    const chatId = msg.message?.chat.id;
+    if (!chatId) return logger.error({ err: new Error('Missing chat ID in message info'), msg });
+
+    if (deleted) return void (await this.bot.sendMessage(chatId, 'Deleted from favorites!'));
+    return void (await this.bot.sendMessage(chatId, 'I could not save it, sorry... 😢'));
   }
 }

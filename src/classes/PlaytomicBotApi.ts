@@ -87,6 +87,16 @@ export class PlaytomicBotApi {
 
     return 200 <= statusCode && statusCode < 300;
   }
+
+  async deleteClub(clubId: string): Promise<boolean> {
+    const { statusCode } = await request(`${this.url}/users/preferred-clubs`, {
+      method: 'DELETE',
+      body: JSON.stringify({ clubId }),
+      headers: { authorization: this.authorization, 'content-type': 'application/json' }
+    });
+
+    return 200 <= statusCode && statusCode < 300;
+  }
 }
 
 const toSummarizedClub = ({ tenant_id, tenant_name, address }: PlaytomicBotApiClub): SummarizedClub => {
