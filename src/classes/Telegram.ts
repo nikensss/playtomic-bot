@@ -124,6 +124,11 @@ export class Telegram {
   }
 
   private async addPreferredClubCallbackQuery(msg: TelegramBot.CallbackQuery, data: string): Promise<void> {
+    await this.bot.editMessageText('One moment, please...', {
+      chat_id: msg.message?.chat.id,
+      message_id: msg.message?.message_id
+    });
+
     const user = msg.from;
     if (!user) return logger.error({ err: new Error(`Cannot identify user!`), msg });
     if (!data) return logger.error({ err: new Error('Mising club ID!'), msg, data });
@@ -156,6 +161,11 @@ export class Telegram {
   }
 
   private async deletePreferredClubCallackQuery(msg: TelegramBot.CallbackQuery, data: string): Promise<void> {
+    await this.bot.editMessageText('One moment, please...', {
+      chat_id: msg.message?.chat.id,
+      message_id: msg.message?.message_id
+    });
+
     const user = msg.from;
     if (!user) return logger.error({ err: new Error(`Cannot identify user!`), msg });
     if (!data) return logger.error({ err: new Error('Mising club ID!'), msg, data });
