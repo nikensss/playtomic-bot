@@ -18,13 +18,13 @@ export class Telegram {
     this.bot.onText(/\/ping/, msg => this.sendMessage(msg.chat.id, 'pong'));
     this.bot.onText(/\/courts/, msg => this.courts(msg));
 
-    this.bot.onText(/\/show-preferred-clubs/, msg => this.showPreferredClubs(msg));
-    this.bot.onText(/\/add-preferred-club /, msg => this.addPreferredClub(msg));
-    this.bot.onText(/\/delete-preferred-club/, msg => this.deletePreferredClub(msg));
+    this.bot.onText(/\/show_preferred_clubs/, msg => this.showPreferredClubs(msg));
+    this.bot.onText(/\/add_preferred_club /, msg => this.addPreferredClub(msg));
+    this.bot.onText(/\/delete_preferred_club/, msg => this.deletePreferredClub(msg));
 
-    this.bot.onText(/\/show-preferred-times/, msg => this.showPreferredTimes(msg));
-    this.bot.onText(/\/add-preferred-time /, msg => this.addPreferredTime(msg));
-    this.bot.onText(/\/delete-preferred-time /, msg => this.deletePreferredTime(msg));
+    this.bot.onText(/\/show_preferred_times/, msg => this.showPreferredTimes(msg));
+    this.bot.onText(/\/add_preferred_time /, msg => this.addPreferredTime(msg));
+    this.bot.onText(/\/delete_preferred_time /, msg => this.deletePreferredTime(msg));
 
     this.bot.on('callback_query', async msg => this.callbackQuery(msg));
 
@@ -63,10 +63,10 @@ export class Telegram {
   private async callbackQuery(msg: TelegramBot.CallbackQuery): Promise<void> {
     const { origin, data } = this.fromCallbackData(msg.data);
     switch (origin) {
-      case 'add-preferred-club':
+      case 'add_preferred_club':
         await this.addPreferredClubCallbackQuery(msg, data);
         break;
-      case 'delete-preferred-club':
+      case 'delete_preferred_club':
         await this.deletePreferredClubCallackQuery(msg, data);
         break;
       default:
@@ -110,14 +110,14 @@ export class Telegram {
   }
 
   private async addPreferredClub(msg: Message): Promise<void> {
-    const [name, user] = [msg.text?.replace(/^\/add-preferred-club (.*)$/, '$1'), msg.from];
+    const [name, user] = [msg.text?.replace(/^\/add_preferred_club (.*)$/, '$1'), msg.from];
 
     if (!user) throw new Error('User info missing');
     if (!name) throw new Error('Missing name');
 
     const clubs = await new PlaytomicBotApi(user).findClub(name);
     const inline_keyboard = clubs.map(c => {
-      return [{ text: c.title, callback_data: this.toCallbackData('add-preferred-club', c.id) }];
+      return [{ text: c.title, callback_data: this.toCallbackData('add_preferred_club', c.id) }];
     });
 
     await this.bot.sendMessage(msg.chat.id, 'Please, select a club:', { reply_markup: { inline_keyboard } });
@@ -149,7 +149,7 @@ export class Telegram {
 
     const clubs = await this.getUserClubs(user);
     const inline_keyboard = clubs.map(c => {
-      return [{ text: c.title, callback_data: this.toCallbackData('delete-preferred-club', c.id) }];
+      return [{ text: c.title, callback_data: this.toCallbackData('delete_preferred_club', c.id) }];
     });
 
     await this.bot.sendMessage(msg.chat.id, 'Which one do you want to remove?', { reply_markup: { inline_keyboard } });
@@ -184,7 +184,7 @@ export class Telegram {
   }
 
   private async addPreferredTime(msg: Message): Promise<void> {
-    const [user, time] = [msg.from, msg.text?.replace(/^\/add-preferred-time (.*)?$/, '$1')];
+    const [user, time] = [msg.from, msg.text?.replace(/^\/add_preferred_time (.*)?$/, '$1')];
     if (!user) throw new Error('User info missing');
     if (!time) return void (await this.bot.sendMessage(msg.chat.id, 'Please, add a time to the command'));
 
@@ -194,7 +194,7 @@ export class Telegram {
   }
 
   private async deletePreferredTime(msg: Message): Promise<void> {
-    const [user, time] = [msg.from, msg.text?.replace(/^\/delete-preferred-time (.*)?$/, '$1')];
+    const [user, time] = [msg.from, msg.text?.replace(/^\/delete_preferred_time (.*)?$/, '$1')];
     if (!user) throw new Error('User info missing');
     if (!time) return void (await this.bot.sendMessage(msg.chat.id, 'Please, add a time to the command'));
 
