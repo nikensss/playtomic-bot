@@ -17,11 +17,12 @@ export type PlaytomicBotApiAvailabilityResponse = {
   }[];
 }[];
 
-type Courts = PlaytomicBotApiAvailabilityResponse[number]['courts'];
-type Availability = Courts[number]['availability'];
-type Slots = Availability[number]['slots'];
+export type Courts = PlaytomicBotApiAvailabilityResponse[number]['courts'];
+export type Availability = Courts[number]['availability'];
+export type Slots = Availability[number]['slots'];
 
-type PlaytomicBotApiClubsResponse = {
+export type SummarizedClub = { title: string; id: string };
+export type PlaytomicBotApiClub = {
   tenant_id: string;
   tenant_name: string;
   address: {
@@ -30,7 +31,8 @@ type PlaytomicBotApiClubsResponse = {
     city: string;
     country: string;
   };
-}[];
+};
+export type PlaytomicBotApiClubsResponse = PlaytomicBotApiClub[];
 
 export class PlaytomicBotApi {
   private url: string;
@@ -62,15 +64,30 @@ export class PlaytomicBotApi {
   async findClub(name: string): Promise<{ title: string; id: string }[]> {
     const authorization = this.authorization;
     const response = await request(`${this.url}/playtomic/clubs`, { query: { name }, headers: { authorization } });
+    return (await response.body.json()).map(toSummarizedClub);
+  }
 
-    const clubs: PlaytomicBotApiClubsResponse = await response.body.json();
+  async getClubInfo(clubId: string): Promise<{ title: string; id: string }> {
+    const authorization = this.authorization;
+    const response = await request(`${this.url}/playtomic/clubs/${clubId}`, { headers: { authorization } });
+    return toSummarizedClub(await response.body.json());
+  }
 
-    return clubs.map(({ tenant_id, tenant_name, address }) => {
-      const fullAddress = `${address.street}, ${address.postal_code}, ${address.city}, ${address.country}`;
-      return { title: `${tenant_name.trim()}: ${fullAddress}`, id: tenant_id };
+  async saveClub(clubId: string): Promise<boolean> {
+    const { statusCode } = await request(`${this.url}/users/preferred-club`, {
+      method: 'POST',
+      body: JSON.stringify({ clubId }),
+      headers: { authorization: this.authorization, 'content-type': 'application/json' }
     });
+
+    return 200 <= statusCode && statusCode < 300;
   }
 }
+
+const toSummarizedClub = ({ tenant_id, tenant_name, address }: PlaytomicBotApiClub): SummarizedClub => {
+  const fullAddress = `${address.street}, ${address.postal_code}, ${address.city}, ${address.country}`;
+  return { title: `${tenant_name.trim()}: ${fullAddress}`, id: tenant_id };
+};
 
 const slotsToString = (slots: Slots): string => {
   const timeToDurations = new Map<string, number[]>();
