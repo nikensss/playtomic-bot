@@ -18,11 +18,11 @@ export class Telegram {
     this.bot.onText(/\/ping/, msg => this.sendMessage(msg.chat.id, 'pong'));
     this.bot.onText(/\/courts/, msg => this.courts(msg));
 
-    this.bot.onText(/\/show-clubs/, msg => this.showClubs(msg));
-    this.bot.onText(/\/add-club /, msg => this.addClub(msg));
-    this.bot.onText(/\/delete-club/, msg => this.deleteClub(msg));
+    this.bot.onText(/\/show-preferred-clubs/, msg => this.showPreferredClubs(msg));
+    this.bot.onText(/\/add-preferred-club /, msg => this.addPreferredClub(msg));
+    this.bot.onText(/\/delete-preferred-club/, msg => this.deletePreferredClub(msg));
 
-    this.bot.onText(/\/show-preferred-times/, msg => this.showHours(msg));
+    this.bot.onText(/\/show-preferred-times/, msg => this.showPreferredTimes(msg));
     this.bot.onText(/\/add-preferred-time /, msg => this.addPreferredTime(msg));
     this.bot.onText(/\/delete-preferred-time /, msg => this.deletePreferredTime(msg));
 
@@ -63,11 +63,11 @@ export class Telegram {
   private async callbackQuery(msg: TelegramBot.CallbackQuery): Promise<void> {
     const { origin, data } = this.fromCallbackData(msg.data);
     switch (origin) {
-      case 'add-club':
-        await this.addClubCallbackQuery(msg, data);
+      case 'add-preferred-club':
+        await this.addPreferredClubCallbackQuery(msg, data);
         break;
-      case 'delete-club':
-        await this.deleteClubCallackQuery(msg, data);
+      case 'delete-preferred-club':
+        await this.deletePreferredClubCallackQuery(msg, data);
         break;
       default:
         logger.error({ err: new Error(`Unknown origin on callback query: ${origin}`), msg });
@@ -100,7 +100,7 @@ export class Telegram {
     return await Promise.all(clubIds.map(c => playtomicBotApi.getClubInfo(c)));
   }
 
-  private async showClubs(msg: Message): Promise<void> {
+  private async showPreferredClubs(msg: Message): Promise<void> {
     const user = msg.from;
     if (!user) throw new Error('User info missing');
 
@@ -109,19 +109,21 @@ export class Telegram {
     await Promise.all(clubs.map(c => this.bot.sendMessage(msg.chat.id, c.title)));
   }
 
-  private async addClub(msg: Message): Promise<void> {
-    const [name, user] = [msg.text?.replace(/^\/add-club (.*)$/, '$1'), msg.from];
+  private async addPreferredClub(msg: Message): Promise<void> {
+    const [name, user] = [msg.text?.replace(/^\/add-preferred-club (.*)$/, '$1'), msg.from];
 
     if (!user) throw new Error('User info missing');
     if (!name) throw new Error('Missing name');
 
     const clubs = await new PlaytomicBotApi(user).findClub(name);
-    const inline_keyboard = clubs.map(c => [{ text: c.title, callback_data: this.toCallbackData('add-club', c.id) }]);
+    const inline_keyboard = clubs.map(c => {
+      return [{ text: c.title, callback_data: this.toCallbackData('add-preferred-club', c.id) }];
+    });
 
     await this.bot.sendMessage(msg.chat.id, 'Please, select a club:', { reply_markup: { inline_keyboard } });
   }
 
-  private async addClubCallbackQuery(msg: TelegramBot.CallbackQuery, data: string): Promise<void> {
+  private async addPreferredClubCallbackQuery(msg: TelegramBot.CallbackQuery, data: string): Promise<void> {
     const user = msg.from;
     if (!user) return logger.error({ err: new Error(`Cannot identify user!`), msg });
     if (!data) return logger.error({ err: new Error('Mising club ID!'), msg, data });
@@ -132,7 +134,7 @@ export class Telegram {
       message_id: msg.message?.message_id
     });
 
-    const saved = await new PlaytomicBotApi(user).savePreferredClub(club.id);
+    const saved = await new PlaytomicBotApi(user).addPreferredClub(club.id);
 
     const chatId = msg.message?.chat.id;
     if (!chatId) return logger.error({ err: new Error('Missing chat ID in message info'), msg });
@@ -141,19 +143,19 @@ export class Telegram {
     return void (await this.bot.sendMessage(chatId, 'I could not save it, sorry... 😢'));
   }
 
-  private async deleteClub(msg: Message): Promise<void> {
+  private async deletePreferredClub(msg: Message): Promise<void> {
     const user = msg.from;
     if (!user) throw new Error('User info missing');
 
     const clubs = await this.getUserClubs(user);
     const inline_keyboard = clubs.map(c => {
-      return [{ text: c.title, callback_data: this.toCallbackData('delete-club', c.id) }];
+      return [{ text: c.title, callback_data: this.toCallbackData('delete-preferred-club', c.id) }];
     });
 
     await this.bot.sendMessage(msg.chat.id, 'Which one do you want to remove?', { reply_markup: { inline_keyboard } });
   }
 
-  private async deleteClubCallackQuery(msg: TelegramBot.CallbackQuery, data: string): Promise<void> {
+  private async deletePreferredClubCallackQuery(msg: TelegramBot.CallbackQuery, data: string): Promise<void> {
     const user = msg.from;
     if (!user) return logger.error({ err: new Error(`Cannot identify user!`), msg });
     if (!data) return logger.error({ err: new Error('Mising club ID!'), msg, data });
@@ -173,7 +175,7 @@ export class Telegram {
     return void (await this.bot.sendMessage(chatId, 'I could not save it, sorry... 😢'));
   }
 
-  private async showHours(msg: Message): Promise<void> {
+  private async showPreferredTimes(msg: Message): Promise<void> {
     const user = msg.from;
     if (!user) throw new Error('User info missing');
 
@@ -186,7 +188,7 @@ export class Telegram {
     if (!user) throw new Error('User info missing');
     if (!time) return void (await this.bot.sendMessage(msg.chat.id, 'Please, add a time to the command'));
 
-    const saved = await new PlaytomicBotApi(user).savePreferredTime(time);
+    const saved = await new PlaytomicBotApi(user).addPreferredTime(time);
     if (saved) return void (await this.bot.sendMessage(msg.chat.id, 'Preferred time added!'));
     return void (await this.bot.sendMessage(msg.chat.id, 'I could not add it... 😢'));
   }

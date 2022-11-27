@@ -78,7 +78,7 @@ export class PlaytomicBotApi {
     return await response.body.json();
   }
 
-  async savePreferredClub(clubId: string): Promise<boolean> {
+  async addPreferredClub(clubId: string): Promise<boolean> {
     const { statusCode } = await request(`${this.url}/users/preferred-clubs`, {
       method: 'POST',
       body: JSON.stringify({ clubId }),
@@ -104,7 +104,7 @@ export class PlaytomicBotApi {
     return await response.body.json();
   }
 
-  async savePreferredTime(time: string): Promise<boolean> {
+  async addPreferredTime(time: string): Promise<boolean> {
     const { statusCode } = await request(`${this.url}/users/preferred-times`, {
       method: 'POST',
       body: JSON.stringify({ time }),
