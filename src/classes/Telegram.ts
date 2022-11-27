@@ -17,10 +17,12 @@ export class Telegram {
     this.bot.onText(/\/id/, msg => this.sendMessage(msg.chat.id, `${msg.chat.id}`));
     this.bot.onText(/\/ping/, msg => this.sendMessage(msg.chat.id, 'pong'));
     this.bot.onText(/\/courts/, msg => this.courts(msg));
+
     this.bot.onText(/\/show-clubs/, msg => this.showClubs(msg));
     this.bot.onText(/\/add-club /, msg => this.addClub(msg));
     this.bot.onText(/\/delete-club/, msg => this.deleteClub(msg));
 
+    this.bot.onText(/\/show-preferred-times/, msg => this.showHours(msg));
     this.bot.on('callback_query', async msg => this.callbackQuery(msg));
 
     this.sendAdminMessage("I'm listening...").catch(err => logger.error({ err }));
@@ -159,12 +161,20 @@ export class Telegram {
       message_id: msg.message?.message_id
     });
 
-    const deleted = await new PlaytomicBotApi(user).deleteClub(club.id);
+    const deleted = await new PlaytomicBotApi(user).deletePreferredClub(club.id);
 
     const chatId = msg.message?.chat.id;
     if (!chatId) return logger.error({ err: new Error('Missing chat ID in message info'), msg });
 
     if (deleted) return void (await this.bot.sendMessage(chatId, 'Deleted from favorites!'));
     return void (await this.bot.sendMessage(chatId, 'I could not save it, sorry... 😢'));
+  }
+
+  private async showHours(msg: Message): Promise<void> {
+    const user = msg.from;
+    if (!user) throw new Error('User info missing');
+
+    const hours = (await new PlaytomicBotApi(user).getPreferredTimes()).join('\n');
+    await this.bot.sendMessage(msg.chat.id, `Your preferred playing times are:\n${hours}`);
   }
 }

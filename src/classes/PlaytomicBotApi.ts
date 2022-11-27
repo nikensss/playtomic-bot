@@ -78,7 +78,7 @@ export class PlaytomicBotApi {
     return await response.body.json();
   }
 
-  async saveClub(clubId: string): Promise<boolean> {
+  async savePreferredClub(clubId: string): Promise<boolean> {
     const { statusCode } = await request(`${this.url}/users/preferred-clubs`, {
       method: 'POST',
       body: JSON.stringify({ clubId }),
@@ -88,7 +88,7 @@ export class PlaytomicBotApi {
     return 200 <= statusCode && statusCode < 300;
   }
 
-  async deleteClub(clubId: string): Promise<boolean> {
+  async deletePreferredClub(clubId: string): Promise<boolean> {
     const { statusCode } = await request(`${this.url}/users/preferred-clubs`, {
       method: 'DELETE',
       body: JSON.stringify({ clubId }),
@@ -96,6 +96,12 @@ export class PlaytomicBotApi {
     });
 
     return 200 <= statusCode && statusCode < 300;
+  }
+
+  async getPreferredTimes(): Promise<string[]> {
+    const authorization = this.authorization;
+    const response = await request(`${this.url}/users/preferred-times`, { headers: { authorization } });
+    return await response.body.json();
   }
 }
 
