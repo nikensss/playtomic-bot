@@ -33,8 +33,8 @@ export class Telegram {
     return this;
   }
 
-  private async sendError(err: unknown, msg: TelegramBot.Message): Promise<void> {
-    await this.sendAdminMessage(`Error in chat with "${msg.chat.username}": ${err}`);
+  private async sendError(err: unknown, msg?: TelegramBot.Message): Promise<void> {
+    await this.sendAdminMessage(`Error in chat with "${msg?.chat.username || 'unknown'}": ${err}`);
   }
 
   private async sendAdminMessage(message: string): Promise<void> {
@@ -101,116 +101,150 @@ export class Telegram {
   }
 
   private async showPreferredClubs(msg: Message): Promise<void> {
-    const user = msg.from;
-    if (!user) throw new Error('User info missing');
+    try {
+      const user = msg.from;
+      if (!user) throw new Error('User info missing');
 
-    const clubs = await this.getUserClubs(user);
-    await this.bot.sendMessage(msg.chat.id, `You have ${clubs.length} favorite clubs:`);
-    await Promise.all(clubs.map(c => this.bot.sendMessage(msg.chat.id, c.title)));
+      const clubs = await this.getUserClubs(user);
+      await this.bot.sendMessage(msg.chat.id, `You have ${clubs.length} favorite clubs:`);
+      await Promise.all(clubs.map(c => this.bot.sendMessage(msg.chat.id, c.title)));
+    } catch (ex) {
+      await this.sendError(ex, msg);
+    }
   }
 
   private async addPreferredClub(msg: Message): Promise<void> {
-    const [name, user] = [msg.text?.replace(/^\/add_preferred_club (.*)$/, '$1'), msg.from];
+    try {
+      const [name, user] = [msg.text?.replace(/^\/add_preferred_club (.*)$/, '$1'), msg.from];
 
-    if (!user) throw new Error('User info missing');
-    if (!name) throw new Error('Missing name');
+      if (!user) throw new Error('User info missing');
+      if (!name) throw new Error('Missing name');
 
-    const clubs = await new PlaytomicBotApi(user).findClub(name);
-    const inline_keyboard = clubs.map(c => {
-      return [{ text: c.title, callback_data: this.toCallbackData('add_preferred_club', c.id) }];
-    });
+      const clubs = await new PlaytomicBotApi(user).findClub(name);
+      const inline_keyboard = clubs.map(c => {
+        return [{ text: c.title, callback_data: this.toCallbackData('add_preferred_club', c.id) }];
+      });
 
-    await this.bot.sendMessage(msg.chat.id, 'Please, select a club:', { reply_markup: { inline_keyboard } });
+      await this.bot.sendMessage(msg.chat.id, 'Please, select a club:', { reply_markup: { inline_keyboard } });
+    } catch (ex) {
+      await this.sendError(ex, msg);
+    }
   }
 
   private async addPreferredClubCallbackQuery(msg: TelegramBot.CallbackQuery, data: string): Promise<void> {
-    await this.bot.editMessageText('One moment, please...', {
-      chat_id: msg.message?.chat.id,
-      message_id: msg.message?.message_id
-    });
+    try {
+      await this.bot.editMessageText('One moment, please...', {
+        chat_id: msg.message?.chat.id,
+        message_id: msg.message?.message_id
+      });
 
-    const user = msg.from;
-    if (!user) return logger.error({ err: new Error(`Cannot identify user!`), msg });
-    if (!data) return logger.error({ err: new Error('Mising club ID!'), msg, data });
+      const user = msg.from;
+      if (!user) return logger.error({ err: new Error(`Cannot identify user!`), msg });
+      if (!data) return logger.error({ err: new Error('Mising club ID!'), msg, data });
 
-    const club = await new PlaytomicBotApi(user).getClubInfo(data);
-    await this.bot.editMessageText(`Ok, I'm saving ${club.title}`, {
-      chat_id: msg.message?.chat.id,
-      message_id: msg.message?.message_id
-    });
+      const club = await new PlaytomicBotApi(user).getClubInfo(data);
+      await this.bot.editMessageText(`Ok, I'm saving ${club.title}`, {
+        chat_id: msg.message?.chat.id,
+        message_id: msg.message?.message_id
+      });
 
-    const saved = await new PlaytomicBotApi(user).addPreferredClub(club.id);
+      const saved = await new PlaytomicBotApi(user).addPreferredClub(club.id);
 
-    const chatId = msg.message?.chat.id;
-    if (!chatId) return logger.error({ err: new Error('Missing chat ID in message info'), msg });
+      const chatId = msg.message?.chat.id;
+      if (!chatId) return logger.error({ err: new Error('Missing chat ID in message info'), msg });
 
-    if (saved) return void (await this.bot.sendMessage(chatId, 'Saved!'));
-    return void (await this.bot.sendMessage(chatId, 'I could not save it, sorry... 😢'));
+      if (saved) return void (await this.bot.sendMessage(chatId, 'Saved!'));
+      return void (await this.bot.sendMessage(chatId, 'I could not save it, sorry... 😢'));
+    } catch (ex) {
+      return void (await this.sendError(ex, msg.message));
+    }
   }
 
   private async deletePreferredClub(msg: Message): Promise<void> {
-    const user = msg.from;
-    if (!user) throw new Error('User info missing');
+    try {
+      const user = msg.from;
+      if (!user) throw new Error('User info missing');
 
-    const clubs = await this.getUserClubs(user);
-    const inline_keyboard = clubs.map(c => {
-      return [{ text: c.title, callback_data: this.toCallbackData('delete_preferred_club', c.id) }];
-    });
+      const clubs = await this.getUserClubs(user);
+      const inline_keyboard = clubs.map(c => {
+        return [{ text: c.title, callback_data: this.toCallbackData('delete_preferred_club', c.id) }];
+      });
 
-    await this.bot.sendMessage(msg.chat.id, 'Which one do you want to remove?', { reply_markup: { inline_keyboard } });
+      await this.bot.sendMessage(msg.chat.id, 'Which one do you want to remove?', {
+        reply_markup: { inline_keyboard }
+      });
+    } catch (ex) {
+      await this.sendError(ex, msg);
+    }
   }
 
   private async deletePreferredClubCallackQuery(msg: TelegramBot.CallbackQuery, data: string): Promise<void> {
-    await this.bot.editMessageText('One moment, please...', {
-      chat_id: msg.message?.chat.id,
-      message_id: msg.message?.message_id
-    });
+    try {
+      await this.bot.editMessageText('One moment, please...', {
+        chat_id: msg.message?.chat.id,
+        message_id: msg.message?.message_id
+      });
 
-    const user = msg.from;
-    if (!user) return logger.error({ err: new Error(`Cannot identify user!`), msg });
-    if (!data) return logger.error({ err: new Error('Mising club ID!'), msg, data });
+      const user = msg.from;
+      if (!user) return logger.error({ err: new Error(`Cannot identify user!`), msg });
+      if (!data) return logger.error({ err: new Error('Mising club ID!'), msg, data });
 
-    const club = await new PlaytomicBotApi(user).getClubInfo(data);
-    await this.bot.editMessageText(`Ok, I'm deleting ${club.title}`, {
-      chat_id: msg.message?.chat.id,
-      message_id: msg.message?.message_id
-    });
+      const club = await new PlaytomicBotApi(user).getClubInfo(data);
+      await this.bot.editMessageText(`Ok, I'm deleting ${club.title}`, {
+        chat_id: msg.message?.chat.id,
+        message_id: msg.message?.message_id
+      });
 
-    const deleted = await new PlaytomicBotApi(user).deletePreferredClub(club.id);
+      const deleted = await new PlaytomicBotApi(user).deletePreferredClub(club.id);
 
-    const chatId = msg.message?.chat.id;
-    if (!chatId) return logger.error({ err: new Error('Missing chat ID in message info'), msg });
+      const chatId = msg.message?.chat.id;
+      if (!chatId) return logger.error({ err: new Error('Missing chat ID in message info'), msg });
 
-    if (deleted) return void (await this.bot.sendMessage(chatId, 'Deleted from favorites!'));
-    return void (await this.bot.sendMessage(chatId, 'I could not save it, sorry... 😢'));
+      if (deleted) return void (await this.bot.sendMessage(chatId, 'Deleted from favorites!'));
+      return void (await this.bot.sendMessage(chatId, 'I could not save it, sorry... 😢'));
+    } catch (ex) {
+      return void (await this.sendError(ex, msg.message));
+    }
   }
 
   private async showPreferredTimes(msg: Message): Promise<void> {
-    const user = msg.from;
-    if (!user) throw new Error('User info missing');
+    try {
+      const user = msg.from;
+      if (!user) throw new Error('User info missing');
 
-    const hours = (await new PlaytomicBotApi(user).getPreferredTimes()).join('\n');
-    await this.bot.sendMessage(msg.chat.id, `Your preferred playing times are:\n${hours}`);
+      const hours = (await new PlaytomicBotApi(user).getPreferredTimes()).join('\n');
+      await this.bot.sendMessage(msg.chat.id, `Your preferred playing times are:\n${hours}`);
+    } catch (ex) {
+      await this.sendError(ex, msg);
+    }
   }
 
   private async addPreferredTime(msg: Message): Promise<void> {
-    const [user, time] = [msg.from, msg.text?.replace(/^\/add_preferred_time (.*)?$/, '$1')];
-    if (!user) throw new Error('User info missing');
-    if (!time) return void (await this.bot.sendMessage(msg.chat.id, 'Please, add a time to the command'));
+    try {
+      const [user, time] = [msg.from, msg.text?.replace(/^\/add_preferred_time (.*)?$/, '$1')];
+      if (!user) throw new Error('User info missing');
+      if (!time) return void (await this.bot.sendMessage(msg.chat.id, 'Please, add a time to the command'));
 
-    const saved = await new PlaytomicBotApi(user).addPreferredTime(time);
-    if (saved) return void (await this.bot.sendMessage(msg.chat.id, 'Preferred time added!'));
-    return void (await this.bot.sendMessage(msg.chat.id, 'I could not add it... 😢'));
+      const saved = await new PlaytomicBotApi(user).addPreferredTime(time);
+      if (saved) return void (await this.bot.sendMessage(msg.chat.id, 'Preferred time added!'));
+      return void (await this.bot.sendMessage(msg.chat.id, 'I could not add it... 😢'));
+    } catch (ex) {
+      return void (await this.sendError(ex, msg));
+    }
   }
 
   private async deletePreferredTime(msg: Message): Promise<void> {
-    const [user, time] = [msg.from, msg.text?.replace(/^\/delete_preferred_time (.*)?$/, '$1')];
-    if (!user) throw new Error('User info missing');
-    if (!time) return void (await this.bot.sendMessage(msg.chat.id, 'Please, add a time to the command'));
+    try {
+      const [user, time] = [msg.from, msg.text?.replace(/^\/delete_preferred_time (.*)?$/, '$1')];
+      if (!user) throw new Error('User info missing');
+      if (!time) return void (await this.bot.sendMessage(msg.chat.id, 'Please, add a time to the command'));
 
-    const saved = await new PlaytomicBotApi(user).deletePreferredTime(time);
+      const saved = await new PlaytomicBotApi(user).deletePreferredTime(time);
 
-    if (saved) return void (await this.bot.sendMessage(msg.chat.id, 'Preferred time deleted!'));
-    return void (await this.bot.sendMessage(msg.chat.id, 'I could not delete it... 😢'));
+      if (saved) return void (await this.bot.sendMessage(msg.chat.id, 'Preferred time deleted!'));
+      return void (await this.bot.sendMessage(msg.chat.id, 'I could not delete it... 😢'));
+    } catch (ex) {
+      return void (await this.sendError(ex, msg));
+    }
   }
 }
