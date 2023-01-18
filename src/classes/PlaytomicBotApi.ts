@@ -1,38 +1,52 @@
 import { request } from 'undici';
 import jwt from 'jsonwebtoken';
 import { User } from 'node-telegram-bot-api';
+import { z } from 'zod';
 
-export type PlaytomicBotApiAvailabilityResponse = {
-  name: string;
-  courts: {
-    name: string;
-    type: string;
-    availability: {
-      startDate: string;
-      slots: {
-        startTime: string;
-        duration: number;
-      }[];
-    }[];
-  }[];
-}[];
+const isPlaytomicBotApiAvailabilityResponse = z
+  .object({
+    name: z.string(),
+    courts: z
+      .object({
+        name: z.string(),
+        type: z.string(),
+        availability: z
+          .object({
+            startDate: z.string(),
+            slots: z
+              .object({
+                startTime: z.string(),
+                duration: z.number()
+              })
+              .array()
+          })
+          .array()
+      })
+      .array()
+  })
+  .array();
 
+export type PlaytomicBotApiAvailabilityResponse = z.infer<typeof isPlaytomicBotApiAvailabilityResponse>;
 export type Courts = PlaytomicBotApiAvailabilityResponse[number]['courts'];
 export type Availability = Courts[number]['availability'];
 export type Slots = Availability[number]['slots'];
 
+const isPlaytomicBotApiClub = z
+  .object({
+    tenant_id: z.string(),
+    tenant_name: z.string(),
+    address: z.object({
+      street: z.string(),
+      postal_code: z.string(),
+      city: z.string(),
+      country: z.string()
+    })
+  })
+  .array();
+export type PlaytomicBotApiClubsResponse = z.infer<typeof isPlaytomicBotApiClub>;
+export type PlaytomicBotApiClub = PlaytomicBotApiClubsResponse[number];
+
 export type SummarizedClub = { title: string; id: string };
-export type PlaytomicBotApiClub = {
-  tenant_id: string;
-  tenant_name: string;
-  address: {
-    street: string;
-    postal_code: string;
-    city: string;
-    country: string;
-  };
-};
-export type PlaytomicBotApiClubsResponse = PlaytomicBotApiClub[];
 
 export class PlaytomicBotApi {
   private url: string;
@@ -52,7 +66,7 @@ export class PlaytomicBotApi {
   async availability(): Promise<string[]> {
     const authorization = this.authorization;
     const response = await request(`${this.url}/playtomic/availability`, { headers: { authorization } });
-    const availability = (await response.body.json()) as PlaytomicBotApiAvailabilityResponse;
+    const availability = isPlaytomicBotApiAvailabilityResponse.parse(await response.body.json());
 
     return availability.map(({ name, courts }) => {
       const stringifiedCourts = courtsToString(courts);
