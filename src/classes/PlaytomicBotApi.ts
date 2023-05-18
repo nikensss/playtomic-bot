@@ -16,7 +16,8 @@ const isPlaytomicBotApiAvailabilityResponse = z
             slots: z
               .object({
                 startTime: z.string(),
-                duration: z.number()
+                duration: z.number(),
+                link: z.string()
               })
               .array()
           })
@@ -67,6 +68,8 @@ export class PlaytomicBotApi {
     const authorization = this.authorization;
     const response = await request(`${this.url}/playtomic/availability`, { headers: { authorization } });
     const availability = isPlaytomicBotApiAvailabilityResponse.parse(await response.body.json());
+
+    if (!availability?.length) return ['No availability found'];
 
     return availability.map(({ name, courts }) => {
       const stringifiedCourts = courtsToString(courts);
@@ -145,10 +148,11 @@ const toSummarizedClub = ({ tenant_id, tenant_name, address }: PlaytomicBotApiCl
 };
 
 const slotsToString = (slots: Slots): string => {
-  const timeToDurations = new Map<string, number[]>();
+  const timeToDurations = new Map<string, string[]>();
   for (const slot of slots) {
     const durations = timeToDurations.get(slot.startTime) || [];
-    timeToDurations.set(slot.startTime, [...durations, slot.duration]);
+    const durationWithLink = `<a href="${slot.link}">${slot.duration}</a>`;
+    timeToDurations.set(slot.startTime, [...durations, durationWithLink]);
   }
 
   return [...timeToDurations.entries()]
