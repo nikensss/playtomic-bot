@@ -33,6 +33,15 @@ export type Courts = PlaytomicBotApiAvailabilityResponse[number]['courts'];
 export type Availability = Courts[number]['availability'];
 export type Slots = Availability[number]['slots'];
 
+export type AvailabilityByDate = {
+  startDate: string;
+  startTime: string;
+  duration: number;
+  club: string;
+  court: string;
+  link: string;
+};
+
 const isPlaytomicBotApiClub = z
   .object({
     tenant_id: z.string(),
@@ -68,14 +77,55 @@ export class PlaytomicBotApi {
   async availability(): Promise<string[]> {
     const authorization = this.authorization;
     const response = await request(`${this.url}/playtomic/availability`, { headers: { authorization } });
-    const availability = isPlaytomicBotApiAvailabilityResponse.parse(await response.body.json());
+    const availableCourts = isPlaytomicBotApiAvailabilityResponse.parse(await response.body.json());
 
-    if (!availability?.length) return ['No availability found'];
+    if (!availableCourts?.length) return ['No availability found'];
 
-    return availability.map(({ name, courts }) => {
-      const stringifiedCourts = courtsToString(courts);
-      if (stringifiedCourts) return `${name}:\n${courtsToString(courts) || '💩'}`;
-      return `${name}: 💩`;
+    const availabilitiesByDate = this.groupCourtAvailabilityByDate(availableCourts);
+
+    return availabilitiesByDate.map(({ startDate, startTime, duration, club, court, link }) => {
+      const start = dayjs(`${startDate} ${startTime}`).format('ddd, MMM D, YYYY HH:mm[h]');
+      return `${start}: ${club} <a href="${link}">${court} (${duration})</a>`;
+    });
+  }
+
+  private groupCourtAvailabilityByDate(availableCourts: PlaytomicBotApiAvailabilityResponse): AvailabilityByDate[] {
+    const availabilitiesByDate: AvailabilityByDate[] = [];
+
+    for (const { name: club, courts } of availableCourts) {
+      for (const { name: court, availability } of courts) {
+        for (const { startDate, slots } of availability) {
+          for (const { duration, startTime, link } of slots) {
+            availabilitiesByDate.push({
+              startDate,
+              startTime,
+              duration,
+              club,
+              court,
+              link
+            });
+          }
+        }
+      }
+    }
+
+    return availabilitiesByDate.sort((a, b) => {
+      const startA = dayjs(`${a.startDate} ${a.startTime}`, 'YYYY-MM-DD HH:mm');
+      const startB = dayjs(`${b.startDate} ${b.startTime}`, 'YYYY-MM-DD HH:mm');
+
+      if (startA.isBefore(startB)) return -1;
+      if (startA.isAfter(startB)) return 1;
+
+      if (a.club < b.club) return -1;
+      if (a.club > b.club) return 1;
+
+      if (a.court < b.court) return -1;
+      if (a.court > b.court) return 1;
+
+      if (a.duration < b.duration) return -1;
+      if (a.duration > b.duration) return 1;
+
+      return 0;
     });
   }
 
@@ -146,27 +196,4 @@ export class PlaytomicBotApi {
 const toSummarizedClub = ({ tenant_id, tenant_name, address }: PlaytomicBotApiClub): SummarizedClub => {
   const fullAddress = `${address.street}, ${address.postal_code}, ${address.city}, ${address.country}`;
   return { title: `${tenant_name.trim()}: ${fullAddress}`, id: tenant_id };
-};
-
-const slotsToString = (slots: Slots): string => {
-  const timeToDurations = new Map<string, string[]>();
-  for (const slot of slots) {
-    const durations = timeToDurations.get(slot.startTime) || [];
-    const durationWithLink = `<a href="${slot.link}">${slot.duration}</a>`;
-    timeToDurations.set(slot.startTime, [...durations, durationWithLink]);
-  }
-
-  return [...timeToDurations.entries()]
-    .map(([startTime, durations]) => `      ${startTime} (${durations.join(', ')})`)
-    .join('\n');
-};
-
-const availabilitiesToString = (availabilities: Availability): string => {
-  return availabilities
-    .map(a => `    ${a.startDate} (${dayjs(a.startDate).format('dddd')}):\n${slotsToString(a.slots)}`)
-    .join('\n');
-};
-
-const courtsToString = (courts: Courts): string => {
-  return courts.map(c => `  ${c.name}:\n${availabilitiesToString(c.availability)}`).join('\n');
 };

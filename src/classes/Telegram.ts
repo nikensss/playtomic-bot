@@ -81,14 +81,14 @@ export class Telegram {
       if (!user) throw new Error('User info missing in message');
 
       await this.bot.sendMessage(msg.chat.id, 'Let me check for you, just a moment...');
-      const messages = (await this.getCourtsAvailability(user)).map(s => {
-        return this.bot.sendMessage(msg.chat.id, s, {
+      const messages = await this.getCourtsAvailability(user);
+
+      for (const message of messages) {
+        await this.bot.sendMessage(msg.chat.id, message, {
           parse_mode: 'HTML',
           disable_web_page_preview: true
         });
-      });
-
-      await Promise.all(messages);
+      }
     } catch (err) {
       logger.error({ err });
       await this.sendError(err, msg);
