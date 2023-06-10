@@ -2,6 +2,7 @@ import { request } from 'undici';
 import jwt from 'jsonwebtoken';
 import { User } from 'node-telegram-bot-api';
 import { z } from 'zod';
+import dayjs from 'dayjs';
 
 const isPlaytomicBotApiAvailabilityResponse = z
   .object({
@@ -161,7 +162,9 @@ const slotsToString = (slots: Slots): string => {
 };
 
 const availabilitiesToString = (availabilities: Availability): string => {
-  return availabilities.map(a => `    ${a.startDate}:\n${slotsToString(a.slots)}`).join('\n');
+  return availabilities
+    .map(a => `    ${a.startDate} (${dayjs(a.startDate).format('dddd')}):\n${slotsToString(a.slots)}`)
+    .join('\n');
 };
 
 const courtsToString = (courts: Courts): string => {
