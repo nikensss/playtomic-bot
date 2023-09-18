@@ -79,14 +79,17 @@ export class PlaytomicBotApi {
     const response = await request(`${this.url}/playtomic/availability`, { headers: { authorization } });
     const availableCourts = isPlaytomicBotApiAvailabilityResponse.parse(await response.body.json());
 
-    if (!availableCourts?.length) return ['No availability found'];
-
-    const availabilitiesByDate = this.groupCourtAvailabilityByDate(availableCourts);
-
-    return availabilitiesByDate.map(({ startDate, startTime, duration, club, court, link }) => {
-      const start = dayjs(`${startDate} ${startTime}`).format('ddd, MMM D, YYYY HH:mm[h]');
-      return `${start}: ${club} <a href="${link}">${court} (${duration})</a>`;
-    });
+    return [
+      // first show the clubs with no courts available
+      ...availableCourts.filter(c => c.courts.length === 0).map(e => `${e.name}: no courts available`),
+      // then show the clubs with courts available
+      ...this.groupCourtAvailabilityByDate(availableCourts.filter(c => c.courts.length > 0)).map(
+        ({ startDate, startTime, duration, club, court, link }) => {
+          const start = dayjs(`${startDate} ${startTime}`).format('ddd, MMM D, YYYY HH:mm[h]');
+          return `${start}: ${club} <a href="${link}">${court} (${duration})</a>`;
+        }
+      )
+    ];
   }
 
   private groupCourtAvailabilityByDate(availableCourts: PlaytomicBotApiAvailabilityResponse): AvailabilityByDate[] {
